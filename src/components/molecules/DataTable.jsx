@@ -48,9 +48,9 @@ const DataTable = ({
     }
   };
 
-  const renderCellValue = (value, column) => {
+const renderCellValue = (value, column, row) => {
     if (column.render) {
-      return column.render(value);
+      return column.render(value, row);
     }
 
     if (column.type === "badge") {
@@ -156,8 +156,8 @@ const DataTable = ({
                   onClick={() => onRowClick?.(row)}
                 >
                   {columns.map((column) => (
-                    <td key={column.key} className="px-4 py-3 text-sm text-gray-900">
-                      {renderCellValue(row[column.key], column)}
+<td key={column.key} className="px-4 py-3 text-sm text-gray-900">
+                      {renderCellValue(row[column.key], column, row)}
                     </td>
                   ))}
                 </tr>

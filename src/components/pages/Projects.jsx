@@ -95,13 +95,13 @@ const enhancedProjects = projects.map(project => {
   });
 
   // Apply all filters
-  const filteredProjects = enhancedProjects.filter(project => {
-    const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         project.countryName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         project.description.toLowerCase().includes(searchTerm.toLowerCase());
+const filteredProjects = enhancedProjects.filter(project => {
+    const matchesSearch = project?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         project?.countryName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         project?.description?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesStatus = !statusFilter || project.status === statusFilter;
-    const matchesRisk = !riskFilter || project.riskLevel === riskFilter;
+    const matchesStatus = !statusFilter || project?.status === statusFilter;
+    const matchesRisk = !riskFilter || project?.riskLevel === riskFilter;
     
     return matchesSearch && matchesStatus && matchesRisk;
   });
@@ -164,22 +164,22 @@ render: (value, row) => {
     {
       key: "name",
       label: "Project Name",
-      render: (value, row) => (
+render: (value, row) => (
         <div>
-          <div className="font-medium text-gray-900">{value}</div>
-          <div className="text-sm text-gray-600 truncate max-w-xs">{row.description}</div>
+          <div className="font-medium text-gray-900">{value || 'Unnamed Project'}</div>
+          <div className="text-sm text-gray-600 truncate max-w-xs">{row?.description || 'No description'}</div>
         </div>
       )
     },
     {
       key: "countryName",
       label: "Country",
-      render: (value, row) => (
+render: (value, row) => (
         <div className="flex items-center">
           <div className="w-6 h-4 bg-gradient-to-r from-primary/20 to-secondary/20 rounded mr-2 flex items-center justify-center">
-            <span className="text-xs font-bold text-primary">{row.countryCode}</span>
+            <span className="text-xs font-bold text-primary">{row?.countryCode || 'XX'}</span>
           </div>
-          {value}
+          {value || 'Unknown'}
         </div>
       )
     },
@@ -197,12 +197,12 @@ render: (value, row) => {
       key: "currentReach",
       label: "Participants",
       type: "number",
-      render: (value, row) => (
+render: (value, row) => (
         <div>
-          <div className="font-medium">{value.toLocaleString()}</div>
-          <div className="text-xs text-gray-600">Target: {row.targetReach.toLocaleString()}</div>
+          <div className="font-medium">{(value || 0).toLocaleString()}</div>
+          <div className="text-xs text-gray-600">Target: {(row?.targetReach || 0).toLocaleString()}</div>
           <div className="text-xs text-gray-500">
-            {row.progressPercentage}% achieved
+            {row?.progressPercentage || 0}% achieved
           </div>
         </div>
       )
@@ -210,22 +210,22 @@ render: (value, row) => {
     {
       key: "timelineProgress",
       label: "Timeline Progress",
-      render: (value, row) => (
+render: (value, row) => (
         <div className="w-24">
           <div className="flex justify-between text-xs text-gray-600 mb-1">
-            <span>{value}%</span>
-            <span>{row.progressPercentage}%</span>
+            <span>{value || 0}%</span>
+            <span>{row?.progressPercentage || 0}%</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2 relative">
             <div
               className="absolute top-0 left-0 h-2 bg-gray-300 rounded-full"
-              style={{ width: `${Math.min(value, 100)}%` }}
+              style={{ width: `${Math.min(value || 0, 100)}%` }}
             ></div>
             <div
               className={`absolute top-0 left-0 h-2 rounded-full ${
-                row.progressPercentage >= value ? "bg-success" : "bg-warning"
+                (row?.progressPercentage || 0) >= (value || 0) ? "bg-success" : "bg-warning"
               }`}
-              style={{ width: `${Math.min(row.progressPercentage, 100)}%` }}
+              style={{ width: `${Math.min(row?.progressPercentage || 0, 100)}%` }}
             ></div>
           </div>
           <div className="text-xs text-gray-500 mt-1">
