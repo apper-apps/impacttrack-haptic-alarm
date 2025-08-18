@@ -11,13 +11,19 @@ const initialState = {
   },
   selectedCountry: null,
   selectedProject: null,
-  sidebarOpen: false
+  sidebarOpen: false,
+  notifications: {
+    items: [],
+    loading: false,
+    error: null,
+    unreadCount: 0
+  }
 };
 
 const melSlice = createSlice({
   name: "mel",
   initialState,
-  reducers: {
+reducers: {
     setSelectedCountry: (state, action) => {
       state.selectedCountry = action.payload;
     },
@@ -29,9 +35,43 @@ const melSlice = createSlice({
     },
     setSidebarOpen: (state, action) => {
       state.sidebarOpen = action.payload;
+    },
+    setNotificationsLoading: (state, action) => {
+      state.notifications.loading = action.payload;
+    },
+    setNotifications: (state, action) => {
+      state.notifications.items = action.payload;
+      state.notifications.unreadCount = action.payload.filter(n => !n.isRead).length;
+      state.notifications.loading = false;
+      state.notifications.error = null;
+    },
+    setNotificationsError: (state, action) => {
+      state.notifications.error = action.payload;
+      state.notifications.loading = false;
+    },
+    updateNotification: (state, action) => {
+      const index = state.notifications.items.findIndex(n => n.Id === action.payload.Id);
+      if (index !== -1) {
+        state.notifications.items[index] = action.payload;
+        state.notifications.unreadCount = state.notifications.items.filter(n => !n.isRead).length;
+      }
+    },
+    removeNotification: (state, action) => {
+      state.notifications.items = state.notifications.items.filter(n => n.Id !== action.payload);
+      state.notifications.unreadCount = state.notifications.items.filter(n => !n.isRead).length;
     }
   },
 });
 
-export const { setSelectedCountry, setSelectedProject, toggleSidebar, setSidebarOpen } = melSlice.actions;
+export const { 
+  setSelectedCountry, 
+  setSelectedProject, 
+  toggleSidebar, 
+  setSidebarOpen,
+  setNotificationsLoading,
+  setNotifications,
+  setNotificationsError,
+  updateNotification,
+  removeNotification
+} = melSlice.actions;
 export default melSlice.reducer;

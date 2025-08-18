@@ -1,19 +1,20 @@
 import React from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
-import Layout from "@/components/organisms/Layout";
-import Dashboard from "@/components/pages/Dashboard";
-import DataEntry from "@/components/pages/DataEntry";
 import Projects from "@/components/pages/Projects";
-import Reports from "@/components/pages/Reports";
-import Analytics from "@/components/pages/Analytics";
+import DataEntry from "@/components/pages/DataEntry";
+import Dashboard from "@/components/pages/Dashboard";
 import Settings from "@/components/pages/Settings";
+import Analytics from "@/components/pages/Analytics";
+import Reports from "@/components/pages/Reports";
+import NotificationCenter from "@/components/pages/NotificationCenter";
+import Layout from "@/components/organisms/Layout";
 
 const App = () => {
   return (
     <BrowserRouter>
       <div className="min-h-screen bg-background">
-        <Routes>
+<Routes>
           <Route path="/" element={<Layout />}>
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
@@ -21,6 +22,7 @@ const App = () => {
             <Route path="projects" element={<Projects />} />
             <Route path="reports" element={<Reports />} />
             <Route path="analytics" element={<Analytics />} />
+            <Route path="notifications" element={<NotificationCenter />} />
             <Route path="settings" element={<Settings />} />
           </Route>
         </Routes>
