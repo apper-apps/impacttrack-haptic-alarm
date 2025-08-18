@@ -123,20 +123,24 @@ const columns = [
       key: "select",
       label: "",
       sortable: false,
-      render: (value, row) => (
-        <input
-          type="checkbox"
-          checked={selectedProjects.includes(row.Id)}
-          onChange={(e) => {
-            if (e.target.checked) {
-              setSelectedProjects([...selectedProjects, row.Id]);
-            } else {
-              setSelectedProjects(selectedProjects.filter(id => id !== row.Id));
-            }
-          }}
-          className="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary focus:ring-2"
-        />
-      )
+render: (value, row) => {
+        if (!row || !row.Id) return null;
+        
+        return (
+          <input
+            type="checkbox"
+            checked={selectedProjects.includes(row.Id)}
+            onChange={(e) => {
+              if (e.target.checked) {
+                setSelectedProjects([...selectedProjects, row.Id]);
+              } else {
+                setSelectedProjects(selectedProjects.filter(id => id !== row.Id));
+              }
+            }}
+            className="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary focus:ring-2"
+          />
+);
+      }
     },
     {
       key: "healthStatus",
@@ -271,18 +275,20 @@ const handleRowClick = (project) => {
     }
   };
 
-  const handleExport = async () => {
+const handleExport = async () => {
     try {
-      const exportData = await projectService.exportProjects(filteredProjects.map(p => p.Id));
+      const projectIds = filteredProjects?.filter(p => p?.Id).map(p => p.Id) || [];
+      const exportData = await projectService.exportProjects(projectIds);
       toast.success("Project data exported successfully");
     } catch (error) {
       toast.error("Failed to export project data");
     }
   };
 
-  const handleSelectAll = (checked) => {
+const handleSelectAll = (checked) => {
     if (checked) {
-      setSelectedProjects(filteredProjects.map(p => p.Id));
+      const validProjectIds = filteredProjects?.filter(p => p?.Id).map(p => p.Id) || [];
+      setSelectedProjects(validProjectIds);
     } else {
       setSelectedProjects([]);
     }
