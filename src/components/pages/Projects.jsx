@@ -1,27 +1,31 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { toast } from "react-toastify";
-import Card from "@/components/atoms/Card";
-import Badge from "@/components/atoms/Badge";
-import Button from "@/components/atoms/Button";
-import SearchBar from "@/components/molecules/SearchBar";
-import DataTable from "@/components/molecules/DataTable";
-import ApperIcon from "@/components/ApperIcon";
-import Loading from "@/components/ui/Loading";
-import Error from "@/components/ui/Error";
-import Empty from "@/components/ui/Empty";
 import { projectService } from "@/services/api/projectService";
 import { countryService } from "@/services/api/countryService";
-
+import ApperIcon from "@/components/ApperIcon";
+import Error from "@/components/ui/Error";
+import Empty from "@/components/ui/Empty";
+import Loading from "@/components/ui/Loading";
+import SearchBar from "@/components/molecules/SearchBar";
+import StatsCard from "@/components/molecules/StatsCard";
+import DataTable from "@/components/molecules/DataTable";
+import Button from "@/components/atoms/Button";
+import Badge from "@/components/atoms/Badge";
+import Card from "@/components/atoms/Card";
+import Select from "@/components/atoms/Select";
 const Projects = () => {
   const { selectedCountry } = useSelector((state) => state.mel);
   
-  const [projects, setProjects] = useState([]);
+const [projects, setProjects] = useState([]);
   const [countries, setCountries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-
+  const [statusFilter, setStatusFilter] = useState("");
+  const [riskFilter, setRiskFilter] = useState("");
+  const [selectedProjects, setSelectedProjects] = useState([]);
+  const [bulkLoading, setBulkLoading] = useState(false);
   const loadData = async () => {
     setLoading(true);
     setError(null);
@@ -57,27 +61,102 @@ const Projects = () => {
   }, [selectedCountry]);
 
   // Enhanced projects data with country information
-  const enhancedProjects = projects.map(project => {
+const enhancedProjects = projects.map(project => {
     const country = countries.find(c => c.Id === project.countryId);
     const progressPercentage = Math.round((project.currentReach / project.targetReach) * 100);
+    
+    // Calculate timeline progress
+    const startDate = new Date(project.startDate);
+    const endDate = new Date(project.endDate);
+    const today = new Date();
+    const totalDuration = endDate - startDate;
+    const elapsed = today - startDate;
+    const timelineProgress = Math.max(0, Math.min(100, Math.round((elapsed / totalDuration) * 100)));
+    
+    // Determine project health status
+    let healthStatus = "on-track"; // Green
+    if (project.status === "inactive" || project.status === "cancelled") {
+      healthStatus = "inactive"; // Grey
+    } else if (project.riskLevel === "high" || progressPercentage < timelineProgress - 20) {
+      healthStatus = "critical"; // Red
+    } else if (project.riskLevel === "medium" || progressPercentage < timelineProgress - 10) {
+      healthStatus = "attention"; // Yellow
+    }
     
     return {
       ...project,
       countryName: country?.name || "Unknown",
       countryCode: country?.code || "XX",
       progressPercentage,
+      timelineProgress,
+      healthStatus,
       progressStatus: progressPercentage >= 100 ? "completed" : progressPercentage >= 75 ? "on-track" : "behind"
     };
   });
 
-  // Filter projects based on search
-  const filteredProjects = enhancedProjects.filter(project =>
-    project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    project.countryName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    project.description.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Apply all filters
+  const filteredProjects = enhancedProjects.filter(project => {
+    const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         project.countryName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         project.description.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = !statusFilter || project.status === statusFilter;
+    const matchesRisk = !riskFilter || project.riskLevel === riskFilter;
+    
+    return matchesSearch && matchesStatus && matchesRisk;
+  });
 
-  const columns = [
+  // Calculate summary statistics
+  const totalProjects = filteredProjects.length;
+  const avgAchievementRate = totalProjects > 0 ? 
+    filteredProjects.reduce((sum, p) => sum + p.progressPercentage, 0) / totalProjects : 0;
+  
+  const statusDistribution = {
+    active: filteredProjects.filter(p => p.status === "active").length,
+    completed: filteredProjects.filter(p => p.status === "completed").length,
+    paused: filteredProjects.filter(p => p.status === "paused").length,
+    inactive: filteredProjects.filter(p => p.status === "inactive").length
+  };
+
+const columns = [
+    {
+      key: "select",
+      label: "",
+      sortable: false,
+      render: (value, row) => (
+        <input
+          type="checkbox"
+          checked={selectedProjects.includes(row.Id)}
+          onChange={(e) => {
+            if (e.target.checked) {
+              setSelectedProjects([...selectedProjects, row.Id]);
+            } else {
+              setSelectedProjects(selectedProjects.filter(id => id !== row.Id));
+            }
+          }}
+          className="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary focus:ring-2"
+        />
+      )
+    },
+    {
+      key: "healthStatus",
+      label: "Health",
+      sortable: false,
+      render: (value, row) => (
+        <div className="flex items-center">
+          <div className={`w-3 h-3 rounded-full mr-2 ${
+            value === "on-track" ? "bg-success" :
+            value === "attention" ? "bg-warning" :
+            value === "critical" ? "bg-error" : "bg-gray-400"
+          }`}></div>
+          <span className="text-sm capitalize">
+            {value === "on-track" ? "On Track" : 
+             value === "attention" ? "Attention" :
+             value === "critical" ? "Critical" : "Inactive"}
+          </span>
+        </div>
+      )
+    },
     {
       key: "name",
       label: "Project Name",
@@ -101,55 +180,112 @@ const Projects = () => {
       )
     },
     {
+      key: "status",
+      label: "Status",
+      render: (value) => {
+        const variant = value === "active" ? "success" : 
+                        value === "completed" ? "info" : 
+                        value === "paused" ? "warning" : "default";
+        return <Badge variant={variant}>{value.charAt(0).toUpperCase() + value.slice(1)}</Badge>;
+      }
+    },
+    {
       key: "currentReach",
-      label: "People Reached",
+      label: "Participants",
       type: "number",
       render: (value, row) => (
         <div>
           <div className="font-medium">{value.toLocaleString()}</div>
           <div className="text-xs text-gray-600">Target: {row.targetReach.toLocaleString()}</div>
+          <div className="text-xs text-gray-500">
+            {row.progressPercentage}% achieved
+          </div>
         </div>
       )
     },
     {
-      key: "progressPercentage",
-      label: "Progress",
+      key: "timelineProgress",
+      label: "Timeline Progress",
       render: (value, row) => (
-        <div className="flex items-center">
-          <div className="flex-1 mr-2">
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div
-                className={`h-2 rounded-full ${
-                  row.progressStatus === "completed" ? "bg-success" :
-                  row.progressStatus === "on-track" ? "bg-info" : "bg-warning"
-                }`}
-                style={{ width: `${Math.min(value, 100)}%` }}
-              ></div>
-            </div>
+        <div className="w-24">
+          <div className="flex justify-between text-xs text-gray-600 mb-1">
+            <span>{value}%</span>
+            <span>{row.progressPercentage}%</span>
           </div>
-          <span className="text-sm font-medium">{value}%</span>
+          <div className="w-full bg-gray-200 rounded-full h-2 relative">
+            <div
+              className="absolute top-0 left-0 h-2 bg-gray-300 rounded-full"
+              style={{ width: `${Math.min(value, 100)}%` }}
+            ></div>
+            <div
+              className={`absolute top-0 left-0 h-2 rounded-full ${
+                row.progressPercentage >= value ? "bg-success" : "bg-warning"
+              }`}
+              style={{ width: `${Math.min(row.progressPercentage, 100)}%` }}
+            ></div>
+          </div>
+          <div className="text-xs text-gray-500 mt-1">
+            Time vs Progress
+          </div>
         </div>
       )
+    },
+    {
+      key: "riskLevel",
+      label: "Risk Level",
+      render: (value) => {
+        const variant = value === "low" ? "success" : 
+                        value === "medium" ? "warning" : "error";
+        return <Badge variant={variant}>{value.charAt(0).toUpperCase() + value.slice(1)}</Badge>;
+      }
     },
     {
       key: "budget",
       label: "Budget",
-      type: "currency"
-    },
-    {
-      key: "status",
-      label: "Status",
-      render: (value) => {
-        const variant = value === "active" ? "success" : 
-                      value === "completed" ? "info" : 
-                      value === "paused" ? "warning" : "default";
-        return <Badge variant={variant}>{value.charAt(0).toUpperCase() + value.slice(1)}</Badge>;
-      }
+      type: "currency",
+      render: (value) => `$${(value / 1000000).toFixed(1)}M`
     }
   ];
 
-  const handleRowClick = (project) => {
-    toast.info(`Opening project: ${project.name}`);
+const handleRowClick = (project) => {
+    toast.info(`Opening detailed view for: ${project.name}`);
+    // Here you would navigate to project details page
+  };
+
+  const handleBulkStatusUpdate = async (newStatus) => {
+    if (selectedProjects.length === 0) {
+      toast.warning("Please select projects to update");
+      return;
+    }
+
+    setBulkLoading(true);
+    try {
+      await projectService.bulkUpdateStatus(selectedProjects, newStatus);
+      await loadData(); // Reload data
+      setSelectedProjects([]);
+      toast.success(`Updated ${selectedProjects.length} projects to ${newStatus}`);
+    } catch (error) {
+      toast.error("Failed to update projects");
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  const handleExport = async () => {
+    try {
+      const exportData = await projectService.exportProjects(filteredProjects.map(p => p.Id));
+      toast.success("Project data exported successfully");
+    } catch (error) {
+      toast.error("Failed to export project data");
+    }
+  };
+
+  const handleSelectAll = (checked) => {
+    if (checked) {
+      setSelectedProjects(filteredProjects.map(p => p.Id));
+    } else {
+      setSelectedProjects([]);
+    }
   };
 
   if (loading) {
@@ -167,81 +303,116 @@ const Projects = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
+<div className="space-y-6">
+      {/* Header with Quick Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Projects</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Project Management</h1>
           <p className="text-gray-600 mt-1">
-            {selectedCountry ? `Projects in ${selectedCountry}` : "All projects across countries"}
+            Comprehensive project tracking and management dashboard
           </p>
         </div>
-        <Button>
-          <ApperIcon name="Plus" size={16} className="mr-2" />
-          New Project
-        </Button>
+        <div className="flex items-center space-x-3">
+          {selectedProjects.length > 0 && (
+            <div className="flex items-center space-x-2 bg-primary/10 px-3 py-2 rounded-lg">
+              <span className="text-sm text-primary font-medium">
+                {selectedProjects.length} selected
+              </span>
+              <Select
+                value=""
+                onChange={(value) => handleBulkStatusUpdate(value)}
+                className="text-sm"
+                disabled={bulkLoading}
+              >
+                <option value="" disabled>Bulk Update Status</option>
+                <option value="active">Set Active</option>
+                <option value="paused">Set Paused</option>
+                <option value="completed">Set Completed</option>
+                <option value="inactive">Set Inactive</option>
+              </Select>
+            </div>
+          )}
+          <Button variant="outline" onClick={handleExport}>
+            <ApperIcon name="Download" size={16} className="mr-2" />
+            Export Data
+          </Button>
+          <Button>
+            <ApperIcon name="Plus" size={16} className="mr-2" />
+            New Project
+          </Button>
+</div>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+{/* Enhanced Summary Statistics */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <StatsCard
+          title="Total Projects"
+          value={totalProjects}
+          icon="FolderOpen"
+          gradient="from-primary to-secondary"
+        />
+        
+        <StatsCard
+          title="Average Achievement"
+          value={`${avgAchievementRate.toFixed(1)}%`}
+          icon="Target"
+          gradient="from-success to-green-600"
+        />
+        
+        <StatsCard
+          title="People Reached"
+          value={filteredProjects.reduce((sum, p) => sum + p.currentReach, 0).toLocaleString()}
+          icon="Users"
+          gradient="from-info to-blue-600"
+        />
+        
+        <StatsCard
+          title="Total Budget"
+          value={`$${(filteredProjects.reduce((sum, p) => sum + p.budget, 0) / 1000000).toFixed(1)}M`}
+          icon="DollarSign"
+          gradient="from-accent to-yellow-600"
+        />
+        
         <Card padding="p-4">
-          <div className="flex items-center">
-            <div className="w-10 h-10 bg-gradient-to-r from-primary to-secondary rounded-lg flex items-center justify-center mr-3">
-              <ApperIcon name="FolderOpen" size={20} className="text-white" />
+          <div className="text-sm text-gray-600 mb-2">Status Distribution</div>
+          <div className="space-y-1">
+            <div className="flex justify-between text-xs">
+              <span className="flex items-center">
+                <div className="w-2 h-2 bg-success rounded-full mr-1"></div>
+                Active
+              </span>
+              <span className="font-medium">{statusDistribution.active}</span>
             </div>
-            <div>
-              <div className="text-2xl font-bold text-gray-900">{filteredProjects.length}</div>
-              <div className="text-sm text-gray-600">Total Projects</div>
+            <div className="flex justify-between text-xs">
+              <span className="flex items-center">
+                <div className="w-2 h-2 bg-info rounded-full mr-1"></div>
+                Completed
+              </span>
+              <span className="font-medium">{statusDistribution.completed}</span>
             </div>
-          </div>
-        </Card>
-
-        <Card padding="p-4">
-          <div className="flex items-center">
-            <div className="w-10 h-10 bg-gradient-to-r from-success to-green-600 rounded-lg flex items-center justify-center mr-3">
-              <ApperIcon name="CheckCircle" size={20} className="text-white" />
+            <div className="flex justify-between text-xs">
+              <span className="flex items-center">
+                <div className="w-2 h-2 bg-warning rounded-full mr-1"></div>
+                Paused
+              </span>
+              <span className="font-medium">{statusDistribution.paused}</span>
             </div>
-            <div>
-              <div className="text-2xl font-bold text-gray-900">
-                {filteredProjects.filter(p => p.status === "active").length}
-              </div>
-              <div className="text-sm text-gray-600">Active</div>
-            </div>
-          </div>
-        </Card>
-
-        <Card padding="p-4">
-          <div className="flex items-center">
-            <div className="w-10 h-10 bg-gradient-to-r from-info to-blue-600 rounded-lg flex items-center justify-center mr-3">
-              <ApperIcon name="Users" size={20} className="text-white" />
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-gray-900">
-                {filteredProjects.reduce((sum, p) => sum + p.currentReach, 0).toLocaleString()}
-              </div>
-              <div className="text-sm text-gray-600">People Reached</div>
-            </div>
-          </div>
-        </Card>
-
-        <Card padding="p-4">
-          <div className="flex items-center">
-            <div className="w-10 h-10 bg-gradient-to-r from-accent to-yellow-600 rounded-lg flex items-center justify-center mr-3">
-              <ApperIcon name="DollarSign" size={20} className="text-white" />
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-gray-900">
-                ${(filteredProjects.reduce((sum, p) => sum + p.budget, 0) / 1000000).toFixed(1)}M
-              </div>
-              <div className="text-sm text-gray-600">Total Budget</div>
+            <div className="flex justify-between text-xs">
+              <span className="flex items-center">
+                <div className="w-2 h-2 bg-gray-400 rounded-full mr-1"></div>
+                Inactive
+              </span>
+              <span className="font-medium">{statusDistribution.inactive}</span>
             </div>
           </div>
         </Card>
       </div>
 
       {/* Search and Filters */}
+{/* Advanced Search and Filter Controls */}
       <Card padding="p-4">
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col lg:flex-row gap-4">
           <div className="flex-1">
             <SearchBar
               placeholder="Search projects by name, country, or description..."
@@ -249,35 +420,107 @@ const Projects = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <div className="flex space-x-2">
-            <Button variant="outline" size="sm">
-              <ApperIcon name="Filter" size={16} className="mr-2" />
-              Filter
-            </Button>
-            <Button variant="outline" size="sm">
-              <ApperIcon name="Download" size={16} className="mr-2" />
-              Export
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Select
+              value={statusFilter}
+              onChange={setStatusFilter}
+              className="min-w-[140px]"
+            >
+              <option value="">All Statuses</option>
+              <option value="active">Active</option>
+              <option value="completed">Completed</option>
+              <option value="paused">Paused</option>
+              <option value="inactive">Inactive</option>
+            </Select>
+            
+            <Select
+              value={riskFilter}
+              onChange={setRiskFilter}
+              className="min-w-[140px]"
+            >
+              <option value="">All Risk Levels</option>
+              <option value="low">Low Risk</option>
+              <option value="medium">Medium Risk</option>
+              <option value="high">High Risk</option>
+            </Select>
+            
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => {
+                setSearchTerm("");
+                setStatusFilter("");
+                setRiskFilter("");
+                setSelectedProjects([]);
+              }}
+            >
+              <ApperIcon name="X" size={16} className="mr-2" />
+              Clear Filters
             </Button>
           </div>
         </div>
+        
+        {(searchTerm || statusFilter || riskFilter) && (
+          <div className="flex items-center mt-3 pt-3 border-t border-gray-200">
+            <ApperIcon name="Info" size={16} className="text-primary mr-2" />
+            <span className="text-sm text-gray-600">
+              Showing {filteredProjects.length} of {projects.length} projects
+            </span>
+          </div>
+        )}
       </Card>
 
-      {/* Projects Table */}
+{/* Enhanced Projects Table */}
       {filteredProjects.length === 0 ? (
         <Empty
           title="No projects found"
-          message={searchTerm ? "Try adjusting your search criteria." : "No projects available for the selected filters."}
+          message={searchTerm || statusFilter || riskFilter ? 
+            "Try adjusting your search and filter criteria." : 
+            "No projects available. Create your first project to get started."}
           icon="FolderOpen"
-          action={() => setSearchTerm("")}
-          actionLabel="Clear Search"
+          action={() => {
+            setSearchTerm("");
+            setStatusFilter("");
+            setRiskFilter("");
+          }}
+          actionLabel="Clear All Filters"
         />
       ) : (
-        <DataTable
-          data={filteredProjects}
-          columns={columns}
-          onRowClick={handleRowClick}
-          emptyMessage="No projects match your search criteria"
-        />
+        <Card padding="p-0">
+          <div className="p-4 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={selectedProjects.length === filteredProjects.length && filteredProjects.length > 0}
+                    onChange={(e) => handleSelectAll(e.target.checked)}
+                    className="w-4 h-4 text-primary bg-gray-100 border-gray-300 rounded focus:ring-primary focus:ring-2"
+                  />
+                  <span className="ml-2 text-sm text-gray-600">
+                    Select All ({filteredProjects.length})
+                  </span>
+                </div>
+                {selectedProjects.length > 0 && (
+                  <span className="text-sm text-primary font-medium">
+                    {selectedProjects.length} selected
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center space-x-2 text-sm text-gray-600">
+                <ApperIcon name="BarChart3" size={16} />
+                <span>Drill-down enabled - Click row for details</span>
+              </div>
+            </div>
+          </div>
+          <DataTable
+            data={filteredProjects}
+            columns={columns}
+            onRowClick={handleRowClick}
+            emptyMessage="No projects match your criteria"
+            loading={loading}
+          />
+        </Card>
       )}
     </div>
   );
