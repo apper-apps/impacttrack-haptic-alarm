@@ -81,8 +81,9 @@ const NotificationCenter = () => {
     }
   };
 
-  const getFilteredNotifications = () => {
-    let filtered = notifications.items;
+const getFilteredNotifications = () => {
+    // Create defensive copy to avoid mutating Redux store state
+    let filtered = [...(notifications.items || [])];
 
     // Apply filters
     switch (filter) {
@@ -102,7 +103,7 @@ const NotificationCenter = () => {
         break;
     }
 
-    // Apply sorting
+    // Apply sorting (safe to mutate our copy)
     switch (sortBy) {
       case 'newest':
         filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
