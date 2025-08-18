@@ -6,7 +6,16 @@ import Input from "@/components/atoms/Input";
 import ChartCard from "@/components/molecules/ChartCard";
 import ApperIcon from "@/components/ApperIcon";
 
-const Analytics = () => {
+const suggestedQueries = [
+  "How many women in Cambodia completed financial training in Q2?",
+  "Show me female participation rates across all countries",
+  "What's the average completion rate for microfinance programs?",
+  "Compare youth engagement in Indonesia vs Philippines",
+  "Which regions have the highest dropout rates?",
+  "Show quarterly growth trends for women's empowerment programs"
+];
+
+function Analytics() {
   const [aiQuery, setAiQuery] = useState("");
   const [queryResult, setQueryResult] = useState(null);
   const [loading, setLoading] = useState(false);
