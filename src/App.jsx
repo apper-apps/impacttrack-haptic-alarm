@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import Projects from "@/components/pages/Projects";
 import DataEntry from "@/components/pages/DataEntry";
+import BulkImport from "@/components/pages/BulkImport";
 import Dashboard from "@/components/pages/Dashboard";
 import Settings from "@/components/pages/Settings";
 import Analytics from "@/components/pages/Analytics";
@@ -19,6 +20,7 @@ const App = () => {
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="data-entry" element={<DataEntry />} />
+            <Route path="bulk-import" element={<BulkImport />} />
             <Route path="projects" element={<Projects />} />
             <Route path="reports" element={<Reports />} />
             <Route path="analytics" element={<Analytics />} />

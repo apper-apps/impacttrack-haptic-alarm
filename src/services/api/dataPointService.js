@@ -40,7 +40,7 @@ export const dataPointService = {
     return dataPointsData.filter(dp => projectIds.includes(dp.projectId)).map(dp => ({ ...dp }));
   },
 
-  async create(dataPointData) {
+async create(dataPointData) {
     await delay(400);
     const newId = Math.max(...dataPointsData.map(dp => dp.Id), 0) + 1;
     const newDataPoint = {
@@ -52,6 +52,26 @@ export const dataPointService = {
     };
     dataPointsData.push(newDataPoint);
     return { ...newDataPoint };
+  },
+
+  async bulkCreate(dataPointsArray) {
+    await delay(600);
+    const createdDataPoints = [];
+    
+    for (const dataPointData of dataPointsArray) {
+      const newId = Math.max(...dataPointsData.map(dp => dp.Id), 0) + 1;
+      const newDataPoint = {
+        Id: newId,
+        submittedAt: new Date().toISOString(),
+        status: "pending",
+        approvedBy: null,
+        ...dataPointData
+      };
+      dataPointsData.push(newDataPoint);
+      createdDataPoints.push({ ...newDataPoint });
+    }
+    
+    return createdDataPoints;
   },
 
   async update(id, updateData) {
@@ -74,7 +94,7 @@ export const dataPointService = {
   },
 
   async delete(id) {
-    await delay(300);
+await delay(300);
     const index = dataPointsData.findIndex(dp => dp.Id === parseInt(id));
     if (index === -1) {
       throw new Error(`DataPoint with Id ${id} not found`);

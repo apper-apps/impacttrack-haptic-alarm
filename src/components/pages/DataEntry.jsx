@@ -1,21 +1,22 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 import { useSelector } from "react-redux";
-import Card from "@/components/atoms/Card";
-import Button from "@/components/atoms/Button";
-import Input from "@/components/atoms/Input";
-import Select from "@/components/atoms/Select";
-import ApperIcon from "@/components/ApperIcon";
-import Loading from "@/components/ui/Loading";
-import Error from "@/components/ui/Error";
+import { useNavigate } from "react-router-dom";
 import { countryService } from "@/services/api/countryService";
 import { projectService } from "@/services/api/projectService";
 import { indicatorService } from "@/services/api/indicatorService";
 import { dataPointService } from "@/services/api/dataPointService";
+import ApperIcon from "@/components/ApperIcon";
+import Error from "@/components/ui/Error";
+import Loading from "@/components/ui/Loading";
+import Input from "@/components/atoms/Input";
+import Button from "@/components/atoms/Button";
+import Card from "@/components/atoms/Card";
+import Select from "@/components/atoms/Select";
 
 const DataEntry = () => {
   const { currentUser } = useSelector((state) => state.mel);
-  
+  const navigate = useNavigate();
   // Data loading state
   const [countries, setCountries] = useState([]);
   const [projects, setProjects] = useState([]);
@@ -231,9 +232,17 @@ const DataEntry = () => {
           <h1 className="text-3xl font-bold text-gray-900">Data Entry</h1>
           <p className="text-gray-600 mt-1">Submit program performance data for review</p>
         </div>
-        <Button variant="outline" size="sm">
+<Button variant="outline" size="sm">
           <ApperIcon name="Download" size={16} className="mr-2" />
           Template
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => navigate('/bulk-import')}
+        >
+          <ApperIcon name="Upload" size={16} className="mr-2" />
+          Bulk Import
         </Button>
       </div>
 

@@ -17,6 +17,11 @@ const initialState = {
     loading: false,
     error: null,
     unreadCount: 0
+  },
+  bulkImport: {
+    loading: false,
+    progress: 0,
+    error: null
   }
 };
 
@@ -59,6 +64,26 @@ reducers: {
     removeNotification: (state, action) => {
       state.notifications.items = state.notifications.items.filter(n => n.Id !== action.payload);
       state.notifications.unreadCount = state.notifications.items.filter(n => !n.isRead).length;
+    },
+    setBulkImportLoading: (state, action) => {
+      state.bulkImport.loading = action.payload;
+      if (!action.payload) {
+        state.bulkImport.progress = 0;
+      }
+    },
+    setBulkImportProgress: (state, action) => {
+      state.bulkImport.progress = action.payload;
+    },
+    setBulkImportError: (state, action) => {
+      state.bulkImport.error = action.payload;
+      state.bulkImport.loading = false;
+    },
+    clearBulkImportState: (state) => {
+      state.bulkImport = {
+        loading: false,
+        progress: 0,
+        error: null
+      };
     }
   },
 });
@@ -72,6 +97,10 @@ export const {
   setNotifications,
   setNotificationsError,
   updateNotification,
-  removeNotification
+  removeNotification,
+  setBulkImportLoading,
+  setBulkImportProgress,
+  setBulkImportError,
+  clearBulkImportState
 } = melSlice.actions;
 export default melSlice.reducer;
