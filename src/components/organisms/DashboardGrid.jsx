@@ -1,11 +1,13 @@
 import React from "react";
 import { useSelector } from "react-redux";
 import { useDashboardData } from "@/hooks/useDashboardData";
-import StatsCard from "@/components/molecules/StatsCard";
-import ChartCard from "@/components/molecules/ChartCard";
-import ProgressRing from "@/components/molecules/ProgressRing";
-import Loading from "@/components/ui/Loading";
+import ApperIcon from "@/components/ApperIcon";
+import Projects from "@/components/pages/Projects";
 import Error from "@/components/ui/Error";
+import Loading from "@/components/ui/Loading";
+import StatsCard from "@/components/molecules/StatsCard";
+import ProgressRing from "@/components/molecules/ProgressRing";
+import ChartCard from "@/components/molecules/ChartCard";
 
 const DashboardGrid = () => {
   const { selectedCountry } = useSelector((state) => state.mel);
@@ -25,19 +27,26 @@ const DashboardGrid = () => {
     );
   }
 
-  // Chart data for quarterly trends
-// Predictive analytics chart data
+// Enhanced chart data for comprehensive results visualization
   const historicalValues = metrics.historicalQuarterly || [11800, 13100, 14200, 12500];
   const projectedValues = metrics.projectedValues || [13200, 14100, 15000];
   
+  // Predictive analytics chart with trend indicators
   const predictiveChartData = [
     {
-      name: "Historical Data",
-      data: historicalValues
+      name: "Historical Performance",
+      data: historicalValues,
+      type: 'line'
     },
     {
-      name: "Projected Data", 
-      data: [null, null, null, historicalValues[historicalValues.length - 1], ...projectedValues]
+      name: "Projected Growth", 
+      data: [null, null, null, historicalValues[historicalValues.length - 1], ...projectedValues],
+      type: 'line'
+    },
+    {
+      name: "Growth Trend",
+      data: historicalValues.map((val, idx) => idx === 0 ? val : val + (metrics.growthRate * 1000 * idx)),
+      type: 'area'
     }
   ];
 
@@ -48,95 +57,204 @@ const DashboardGrid = () => {
         enabled: true,
         easing: 'easeinout',
         speed: 800
+      },
+      toolbar: {
+        show: true,
+        tools: {
+          download: true,
+          selection: false,
+          zoom: true,
+          zoomin: true,
+          zoomout: true,
+          pan: false,
+          reset: true
+        }
       }
     },
     xaxis: {
-      categories: ["2023-Q2", "2023-Q3", "2023-Q4", "2024-Q1", "2024-Q2", "2024-Q3", "2024-Q4"]
+      categories: ["2023-Q2", "2023-Q3", "2023-Q4", "2024-Q1", "2024-Q2", "2024-Q3", "2024-Q4"],
+      title: {
+        text: "Reporting Periods"
+      }
     },
     yaxis: {
       title: {
         text: "Number of People Trained"
+      },
+      labels: {
+        formatter: function(val) {
+          return val >= 1000 ? (val/1000).toFixed(1) + 'K' : val;
+        }
       }
     },
     stroke: {
       curve: "smooth",
-      width: [3, 3],
-      dashArray: [0, 5]
+      width: [4, 4, 2],
+      dashArray: [0, 8, 0]
     },
-    colors: ["#667eea", "#f59e0b"],
+    fill: {
+      type: ['solid', 'solid', 'gradient'],
+      opacity: [1, 0.8, 0.3],
+      gradient: {
+        shade: 'light',
+        type: 'vertical',
+        opacityFrom: 0.4,
+        opacityTo: 0.1,
+      }
+    },
+    colors: ["#667eea", "#f59e0b", "#28a745"],
     markers: {
-      size: [6, 4],
-      strokeColors: ["#667eea", "#f59e0b"],
-      fillColors: ["#667eea", "#f59e0b"]
+      size: [6, 4, 0],
+      strokeColors: ["#667eea", "#f59e0b", "#28a745"],
+      fillColors: ["#667eea", "#f59e0b", "#28a745"]
     },
     legend: {
       show: true,
-      position: 'top'
+      position: 'top',
+      horizontalAlign: 'center'
     },
     annotations: {
       xaxis: [{
         x: 3.5,
         borderColor: '#e5e7eb',
+        borderWidth: 2,
+        strokeDashArray: 5,
         label: {
-          text: 'Forecast →',
+          text: 'Forecast Period →',
           style: {
-            color: '#6b7280'
+            color: '#6b7280',
+            background: '#f8fafc',
+            fontSize: '12px'
           }
         }
-      }]
+      }],
+      points: metrics.anomalies.map(anomaly => ({
+        x: anomaly.period,
+        y: anomaly.value,
+        marker: {
+          size: 8,
+          fillColor: '#dc2626',
+          strokeColor: '#ffffff',
+          radius: 4
+        },
+        label: {
+          text: 'Anomaly Detected',
+          style: {
+            color: '#ffffff',
+            background: '#dc2626'
+          }
+        }
+      }))
+    },
+    tooltip: {
+      shared: true,
+      intersect: false,
+      y: {
+        formatter: function(val) {
+          if (val === null) return '';
+          return val >= 1000 ? (val/1000).toFixed(1) + 'K people' : val + ' people';
+        }
+      }
     }
   };
 
-  // Anomaly detection visual data
+  // Enhanced anomaly detection visual data
   const anomalies = metrics.anomalies || [];
   const hasAnomalies = anomalies.length > 0;
 
-  // Country performance chart with anomaly highlighting
+  // Country performance chart with enhanced visualization
   const countryData = data.countries
     .filter(c => c.status === "active")
-    .slice(0, 6)
+    .slice(0, 8)
     .map(c => {
-      const countryTraining = metrics.countryPerformance?.[c.name] || c.totalReach;
+      const countryTraining = metrics.countryPerformance?.[c.name] || c.totalReach || 0;
       const hasAnomaly = anomalies.some(a => a.region === c.name);
+      const performance = countryTraining > (metrics.totalPeopleReached / data.countries.length) ? 'high' : 'normal';
       return {
         name: c.name,
         reach: countryTraining,
-        hasAnomaly
+        hasAnomaly,
+        performance,
+        target: Math.round(countryTraining * 1.15) // 15% growth target
       };
-    });
+    })
+    .sort((a, b) => b.reach - a.reach);
 
-  const countryChartData = [{
-    name: "Training Participation",
-    data: countryData.map(c => ({
-      x: c.name,
-      y: c.reach,
-      fillColor: c.hasAnomaly ? '#dc2626' : '#667eea'
-    }))
-  }];
+  const countryChartData = [
+    {
+      name: "Current Performance",
+      data: countryData.map(c => c.reach)
+    },
+    {
+      name: "Growth Target",
+      data: countryData.map(c => c.target)
+    }
+  ];
 
   const countryChartOptions = {
     chart: {
-      type: "bar"
+      type: "bar",
+      toolbar: {
+        show: true
+      }
     },
     xaxis: {
-      categories: countryData.map(c => c.name)
+      categories: countryData.map(c => c.name),
+      title: {
+        text: "Countries"
+      }
     },
     yaxis: {
       title: {
         text: "People Trained (Current Quarter)"
+      },
+      labels: {
+        formatter: function(val) {
+          return val >= 1000 ? (val/1000).toFixed(1) + 'K' : val;
+        }
       }
     },
     plotOptions: {
       bar: {
-        borderRadius: 4,
+        borderRadius: 6,
         horizontal: false,
-        distributed: true
+        columnWidth: '70%',
+        dataLabels: {
+          position: 'top'
+        }
       }
     },
-    colors: countryData.map(c => c.hasAnomaly ? '#dc2626' : '#667eea'),
+    colors: ["#667eea", "#f1c40f"],
+    dataLabels: {
+      enabled: true,
+      formatter: function(val) {
+        return val >= 1000 ? (val/1000).toFixed(1) + 'K' : val;
+      },
+      offsetY: -20,
+      style: {
+        fontSize: '10px',
+        colors: ["#304758"]
+      }
+    },
     legend: {
-      show: false
+      show: true,
+      position: 'top'
+    },
+    tooltip: {
+      y: {
+        formatter: function(val) {
+          return val >= 1000 ? (val/1000).toFixed(1) + 'K people' : val + ' people';
+        }
+      }
     }
+  };
+
+  // Performance insights chart data
+  const performanceInsights = {
+    growth: ((projectedValues[0] - historicalValues[historicalValues.length - 1]) / historicalValues[historicalValues.length - 1] * 100).toFixed(1),
+    trend: metrics.growthRate > 0 ? 'positive' : 'negative',
+    topPerformer: countryData[0]?.name || 'N/A',
+    anomaliesCount: anomalies.length
   };
 
 return (
@@ -173,7 +291,7 @@ return (
         </div>
       )}
 
-      {/* Key Metrics Cards */}
+{/* Results Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard
           title="Total People Reached"
@@ -195,22 +313,65 @@ return (
         />
         
         <StatsCard
-          title="Projected Q2 2024"
-          value={projectedValues[0] || 13200}
-          change={`${(metrics.growthRate * 100).toFixed(1)}% growth rate`}
-          changeType={metrics.growthRate > 0 ? "positive" : "negative"}
+          title="Growth Projection"
+          value={performanceInsights.growth}
+          unit="%"
+          change={`Next quarter forecast`}
+          changeType={performanceInsights.trend}
           icon="TrendingUp"
           gradient="from-success to-green-600"
         />
         
         <StatsCard
-          title="Active Countries"
-          value={metrics.activeCountries}
-          change={hasAnomalies ? `${anomalies.length} alerts` : "0 alerts"}
+          title="Data Quality Score"
+          value={hasAnomalies ? Math.max(85 - (anomalies.length * 10), 0) : 95}
+          unit="%"
+          change={hasAnomalies ? `${anomalies.length} anomalies detected` : "No anomalies"}
           changeType={hasAnomalies ? "negative" : "positive"}
-          icon="Globe"
+          icon="Shield"
           gradient="from-info to-blue-600"
         />
+      </div>
+
+      {/* Chart Results Analysis Section */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border-l-4 border-primary">
+        <div className="flex items-start space-x-4">
+          <div className="flex-shrink-0">
+            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
+              <ApperIcon name="BarChart3" size={20} className="text-white" />
+            </div>
+          </div>
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Chart Analysis Results</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+              <div>
+                <span className="font-medium text-gray-700">Growth Trend:</span>
+                <div className="text-gray-600 mt-1">
+                  {performanceInsights.trend === 'positive' ? 
+                    `📈 Positive growth of ${performanceInsights.growth}%` : 
+                    `📉 Decline of ${Math.abs(performanceInsights.growth)}%`
+                  }
+                </div>
+              </div>
+              <div>
+                <span className="font-medium text-gray-700">Top Performer:</span>
+                <div className="text-gray-600 mt-1">
+                  🏆 {performanceInsights.topPerformer} leads with {countryData[0]?.reach >= 1000 ? 
+                    `${(countryData[0]?.reach/1000).toFixed(1)}K` : countryData[0]?.reach} people
+                </div>
+              </div>
+              <div>
+                <span className="font-medium text-gray-700">Data Insights:</span>
+                <div className="text-gray-600 mt-1">
+                  {hasAnomalies ? 
+                    `⚠️ ${anomalies.length} anomalies require attention` : 
+                    `✅ All data points within normal ranges`
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Predictive Analytics and Progress */}
