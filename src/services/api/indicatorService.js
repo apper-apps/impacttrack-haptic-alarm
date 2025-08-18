@@ -17,9 +17,15 @@ export const indicatorService = {
     return { ...indicator };
   },
 
-  async getByCategory(category) {
+async getByCategory(category) {
     await delay(300);
     return indicatorsData.filter(ind => ind.category.toLowerCase() === category.toLowerCase()).map(ind => ({ ...ind }));
+  },
+
+  async getByIds(ids) {
+    await delay(300);
+    const idNumbers = ids.map(id => parseInt(id));
+    return indicatorsData.filter(ind => idNumbers.includes(ind.Id)).map(ind => ({ ...ind }));
   },
 
   async create(indicatorData) {
