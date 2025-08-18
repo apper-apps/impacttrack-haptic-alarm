@@ -1,0 +1,62 @@
+[
+  {
+    "Id": 1,
+    "email": "anwesha@goodreturn.org",
+    "name": "Anwesha MEL Lead",
+    "role": "Super Admin",
+    "countryId": null,
+    "permissions": ["all"],
+    "lastLogin": "2024-03-30T08:45:00Z",
+    "status": "active"
+  },
+  {
+    "Id": 2,
+    "email": "cambodia.manager@goodreturn.org",
+    "name": "Country Manager - Cambodia",
+    "role": "Country Manager",
+    "countryId": 1,
+    "permissions": ["data_entry", "view_country", "export_reports"],
+    "lastLogin": "2024-03-29T14:20:00Z",
+    "status": "active"
+  },
+  {
+    "Id": 3,
+    "email": "philippines.manager@goodreturn.org",
+    "name": "Country Manager - Philippines", 
+    "role": "Country Manager",
+    "countryId": 2,
+    "permissions": ["data_entry", "view_country", "export_reports"],
+    "lastLogin": "2024-03-30T07:15:00Z",
+    "status": "active"
+  },
+  {
+    "Id": 4,
+    "email": "solomon.manager@goodreturn.org",
+    "name": "Country Manager - Solomon Islands",
+    "role": "Country Manager",
+    "countryId": 3,
+    "permissions": ["data_entry", "view_country", "export_reports"],
+    "lastLogin": "2024-03-28T11:30:00Z",
+    "status": "active"
+  },
+  {
+    "Id": 5,
+    "email": "digital.project@goodreturn.org",
+    "name": "Project Officer - Digital Banking",
+    "role": "Project Officer",
+    "countryId": 1,
+    "permissions": ["data_entry", "view_project"],
+    "lastLogin": "2024-03-29T16:45:00Z",
+    "status": "active"
+  },
+  {
+    "Id": 6,
+    "email": "ceo@goodreturn.org",
+    "name": "CEO - Executive",
+    "role": "Executive",
+    "countryId": null,
+    "permissions": ["view_dashboard", "view_reports"],
+    "lastLogin": "2024-03-28T09:00:00Z",
+    "status": "active"
+  }
+]

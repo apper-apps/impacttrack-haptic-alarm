@@ -1,0 +1,134 @@
+[
+  {
+    "Id": 1,
+    "name": "People Trained in Financial Literacy",
+    "category": "Training",
+    "type": "count",
+    "unit": "people",
+    "baseline": 0,
+    "target": 500000,
+    "frequency": "quarterly",
+    "description": "Number of people who completed financial literacy training programs"
+  },
+  {
+    "Id": 2,
+    "name": "Women Participants",
+    "category": "Gender",
+    "type": "count", 
+    "unit": "people",
+    "baseline": 0,
+    "target": 450000,
+    "frequency": "quarterly",
+    "description": "Number of women participating in program activities"
+  },
+  {
+    "Id": 3,
+    "name": "Female Participation Rate",
+    "category": "Gender",
+    "type": "percentage",
+    "unit": "%",
+    "baseline": 75,
+    "target": 90,
+    "frequency": "quarterly",
+    "description": "Percentage of program participants who are women"
+  },
+  {
+    "Id": 4,
+    "name": "Loans Disbursed",
+    "category": "Finance",
+    "type": "currency",
+    "unit": "USD",
+    "baseline": 0,
+    "target": 125000000,
+    "frequency": "monthly",
+    "description": "Total value of loans disbursed to program participants"
+  },
+  {
+    "Id": 5,
+    "name": "Number of Loans",
+    "category": "Finance",
+    "type": "count",
+    "unit": "loans",
+    "baseline": 0,
+    "target": 250000,
+    "frequency": "monthly",
+    "description": "Total number of loans provided to participants"
+  },
+  {
+    "Id": 6,
+    "name": "Savings Account Openings",
+    "category": "Finance",
+    "type": "count",
+    "unit": "accounts",
+    "baseline": 0,
+    "target": 400000,
+    "frequency": "quarterly",
+    "description": "Number of new savings accounts opened by participants"
+  },
+  {
+    "Id": 7,
+    "name": "Training Sessions Delivered",
+    "category": "Training",
+    "type": "count",
+    "unit": "sessions",
+    "baseline": 0,
+    "target": 15000,
+    "frequency": "monthly",
+    "description": "Number of training sessions conducted"
+  },
+  {
+    "Id": 8,
+    "name": "Digital Banking Adoptions",
+    "category": "Digital",
+    "type": "count",
+    "unit": "people",
+    "baseline": 0,
+    "target": 300000,
+    "frequency": "quarterly",
+    "description": "Number of people who started using digital banking services"
+  },
+  {
+    "Id": 9,
+    "name": "Business Started",
+    "category": "Business Development",
+    "type": "count",
+    "unit": "businesses",
+    "baseline": 0,
+    "target": 25000,
+    "frequency": "quarterly",
+    "description": "Number of new businesses started by program participants"
+  },
+  {
+    "Id": 10,
+    "name": "Average Loan Size",
+    "category": "Finance",
+    "type": "currency",
+    "unit": "USD",
+    "baseline": 300,
+    "target": 500,
+    "frequency": "quarterly",
+    "description": "Average size of loans disbursed to participants"
+  },
+  {
+    "Id": 11,
+    "name": "Loan Repayment Rate",
+    "category": "Finance",
+    "type": "percentage",
+    "unit": "%",
+    "baseline": 85,
+    "target": 95,
+    "frequency": "quarterly",
+    "description": "Percentage of loans that are repaid on time"
+  },
+  {
+    "Id": 12,
+    "name": "Community Savings Groups Formed",
+    "category": "Community",
+    "type": "count",
+    "unit": "groups",
+    "baseline": 0,
+    "target": 5000,
+    "frequency": "quarterly",
+    "description": "Number of community-based savings groups established"
+  }
+]

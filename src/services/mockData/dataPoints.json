@@ -1,0 +1,167 @@
+[
+  {
+    "Id": 1,
+    "indicatorId": 1,
+    "projectId": 1,
+    "value": 12500,
+    "period": "2024-Q1",
+    "submittedBy": "Country Manager - Cambodia",
+    "submittedAt": "2024-03-28T10:30:00Z",
+    "approvedBy": "Anwesha MEL Lead",
+    "status": "approved"
+  },
+  {
+    "Id": 2,
+    "indicatorId": 2,
+    "projectId": 1,
+    "value": 11500,
+    "period": "2024-Q1",
+    "submittedBy": "Country Manager - Cambodia",
+    "submittedAt": "2024-03-28T10:30:00Z",
+    "approvedBy": "Anwesha MEL Lead",
+    "status": "approved"
+  },
+  {
+    "Id": 3,
+    "indicatorId": 3,
+    "projectId": 1,
+    "value": 92,
+    "period": "2024-Q1",
+    "submittedBy": "Country Manager - Cambodia",
+    "submittedAt": "2024-03-28T10:30:00Z",
+    "approvedBy": "Anwesha MEL Lead",
+    "status": "approved"
+  },
+  {
+    "Id": 4,
+    "indicatorId": 4,
+    "projectId": 1,
+    "value": 3250000,
+    "period": "2024-Q1",
+    "submittedBy": "Country Manager - Cambodia",
+    "submittedAt": "2024-03-28T10:30:00Z",
+    "approvedBy": "Anwesha MEL Lead",
+    "status": "approved"
+  },
+  {
+    "Id": 5,
+    "indicatorId": 5,
+    "projectId": 1,
+    "value": 6500,
+    "period": "2024-Q1",
+    "submittedBy": "Country Manager - Cambodia",
+    "submittedAt": "2024-03-28T10:30:00Z",
+    "approvedBy": "Anwesha MEL Lead",
+    "status": "approved"
+  },
+  {
+    "Id": 6,
+    "indicatorId": 1,
+    "projectId": 2,
+    "value": 18900,
+    "period": "2024-Q1",
+    "submittedBy": "Project Officer - Digital Banking",
+    "submittedAt": "2024-03-29T14:15:00Z",
+    "approvedBy": "Anwesha MEL Lead",
+    "status": "approved"
+  },
+  {
+    "Id": 7,
+    "indicatorId": 8,
+    "projectId": 2,
+    "value": 18900,
+    "period": "2024-Q1",
+    "submittedBy": "Project Officer - Digital Banking",
+    "submittedAt": "2024-03-29T14:15:00Z",
+    "approvedBy": "Anwesha MEL Lead",
+    "status": "approved"
+  },
+  {
+    "Id": 8,
+    "indicatorId": 1,
+    "projectId": 4,
+    "value": 15600,
+    "period": "2024-Q1",
+    "submittedBy": "Country Manager - Philippines",
+    "submittedAt": "2024-03-30T09:45:00Z",
+    "approvedBy": null,
+    "status": "pending"
+  },
+  {
+    "Id": 9,
+    "indicatorId": 2,
+    "projectId": 4,
+    "value": 13728,
+    "period": "2024-Q1",
+    "submittedBy": "Country Manager - Philippines",
+    "submittedAt": "2024-03-30T09:45:00Z",
+    "approvedBy": null,
+    "status": "pending"
+  },
+  {
+    "Id": 10,
+    "indicatorId": 9,
+    "projectId": 4,
+    "value": 425,
+    "period": "2024-Q1",
+    "submittedBy": "Country Manager - Philippines",
+    "submittedAt": "2024-03-30T09:45:00Z",
+    "approvedBy": null,
+    "status": "pending"
+  },
+  {
+    "Id": 11,
+    "indicatorId": 1,
+    "projectId": 8,
+    "value": 8750,
+    "period": "2024-Q1",
+    "submittedBy": "Country Manager - Solomon Islands",
+    "submittedAt": "2024-03-27T16:20:00Z",
+    "approvedBy": "Anwesha MEL Lead",
+    "status": "approved"
+  },
+  {
+    "Id": 12,
+    "indicatorId": 12,
+    "projectId": 8,
+    "value": 125,
+    "period": "2024-Q1",
+    "submittedBy": "Country Manager - Solomon Islands",
+    "submittedAt": "2024-03-27T16:20:00Z",
+    "approvedBy": "Anwesha MEL Lead",
+    "status": "approved"
+  },
+  {
+    "Id": 13,
+    "indicatorId": 1,
+    "projectId": 1,
+    "value": 14200,
+    "period": "2023-Q4",
+    "submittedBy": "Country Manager - Cambodia",
+    "submittedAt": "2023-12-28T10:30:00Z",
+    "approvedBy": "Anwesha MEL Lead",
+    "status": "approved"
+  },
+  {
+    "Id": 14,
+    "indicatorId": 1,
+    "projectId": 1,
+    "value": 13100,
+    "period": "2023-Q3",
+    "submittedBy": "Country Manager - Cambodia",
+    "submittedAt": "2023-09-28T10:30:00Z",
+    "approvedBy": "Anwesha MEL Lead",
+    "status": "approved"
+  },
+  {
+    "Id": 15,
+    "indicatorId": 1,
+    "projectId": 1,
+    "value": 11800,
+    "period": "2023-Q2",
+    "submittedBy": "Country Manager - Cambodia",
+    "submittedAt": "2023-06-28T10:30:00Z",
+    "approvedBy": "Anwesha MEL Lead",
+    "status": "approved"
+  }
+]
