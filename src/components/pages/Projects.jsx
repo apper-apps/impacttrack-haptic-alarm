@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { projectService } from "@/services/api/projectService";
 import { countryService } from "@/services/api/countryService";
@@ -15,7 +16,8 @@ import Badge from "@/components/atoms/Badge";
 import Card from "@/components/atoms/Card";
 import Select from "@/components/atoms/Select";
 const Projects = () => {
-  const { selectedCountry } = useSelector((state) => state.mel);
+const { selectedCountry } = useSelector((state) => state.mel);
+  const navigate = useNavigate();
   
 const [projects, setProjects] = useState([]);
   const [countries, setCountries] = useState([]);
@@ -302,8 +304,7 @@ render: (value, row) => {
   ];
 
 const handleRowClick = (project) => {
-    toast.info(`Opening detailed view for: ${project.name}`);
-    // Here you would navigate to project details page
+    navigate(`/projects/${project.Id}`);
   };
 
   const handleBulkStatusUpdate = async (newStatus) => {

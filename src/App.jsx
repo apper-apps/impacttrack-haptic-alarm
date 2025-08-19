@@ -4,6 +4,7 @@ import { ToastContainer } from "react-toastify";
 import ApprovalQueue from "@/components/pages/ApprovalQueue";
 import CountryDetail from "@/components/pages/CountryDetail";
 import Projects from "@/components/pages/Projects";
+import ProjectDetail from "@/components/pages/ProjectDetail";
 import DataEntry from "@/components/pages/DataEntry";
 import Countries from "@/components/pages/Countries";
 import Dashboard from "@/components/pages/Dashboard";
@@ -25,7 +26,8 @@ function App() {
             <Route path="data-entry" element={<DataEntry />} />
             <Route path="approval-queue" element={<ApprovalQueue />} />
             <Route path="bulk-import" element={<BulkImport />} />
-            <Route path="projects" element={<Projects />} />
+<Route path="projects" element={<Projects />} />
+            <Route path="projects/:id" element={<ProjectDetail />} />
             <Route path="countries" element={<Countries />} />
             <Route path="countries/:id" element={<CountryDetail />} />
 <Route path="reports" element={<Reports />} />
