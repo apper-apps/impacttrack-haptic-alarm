@@ -214,10 +214,10 @@ useEffect(() => {
       setQualityScores({});
       setPreviousPeriodData({});
     }
-  }, [selectedProject, indicators, currentUser.role, dataEntry.draft, submissionStatuses, approvalWorkflow, qualityScores, dispatch]);
+  }, [selectedProject, indicators, currentUser.role, dataEntry.draft, dispatch]);
 
-  // Load submission statuses for indicators
-const loadSubmissionStatuses = async (indicatorIds) => {
+// Load submission statuses for indicators
+  const loadSubmissionStatuses = useCallback(async (indicatorIds) => {
     try {
       const statusPromises = indicatorIds.map(async (indicatorId) => {
         const dataPoints = await dataPointService.getAll();
@@ -260,10 +260,10 @@ const loadSubmissionStatuses = async (indicatorIds) => {
     } catch (error) {
       console.error("Error loading submission statuses:", error);
     }
-  };
+  }, [selectedProject?.Id, selectedCountry?.Id]);
 
-  // Load previous period data for variance analysis
-  const loadPreviousPeriodData = async (indicatorIds) => {
+// Load previous period data for variance analysis
+  const loadPreviousPeriodData = useCallback(async (indicatorIds) => {
     try {
       const currentPeriod = selectedPeriod;
       const previousPeriod = getPreviousPeriod(currentPeriod);
@@ -300,18 +300,18 @@ const loadSubmissionStatuses = async (indicatorIds) => {
     } catch (error) {
       console.error("Error loading previous period data:", error);
     }
-  };
+  }, [selectedPeriod, selectedProject?.Id, selectedCountry?.Id]);
 
-  // Helper functions for quality metrics
-  const calculateAverageQualityScore = (entries) => {
+// Helper functions for quality metrics
+  const calculateAverageQualityScore = useCallback((entries) => {
     const scores = entries.filter(e => qualityScores[e.indicatorId]).map(e => qualityScores[e.indicatorId]);
     return scores.length > 0 ? scores.reduce((sum, score) => sum + score, 0) / scores.length : 0;
-  };
+  }, [qualityScores]);
 
-  const calculateValidationPassRate = (entries) => {
+  const calculateValidationPassRate = useCallback((entries) => {
     const validatedEntries = entries.filter(e => e.value && validateEntry(e) === null);
     return entries.length > 0 ? (validatedEntries.length / entries.length) * 100 : 0;
-  };
+  }, [previousPeriodData, validationRulesEngine, dataEntries]);
 
   const getPreviousPeriod = (currentPeriod) => {
     const [year, quarter] = currentPeriod.split('-Q');
