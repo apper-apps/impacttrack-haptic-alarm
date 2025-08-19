@@ -2,8 +2,123 @@ import dataPointsData from "@/services/mockData/dataPoints.json";
 import projectsData from "@/services/mockData/projects.json";
 import indicatorsData from "@/services/mockData/indicators.json";
 import usersData from "@/services/mockData/users.json";
-import React from "react";
-import Error from "@/components/ui/Error";
+// Service utilities
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+const dataPointService = {
+  async getAll() {
+    await delay(Math.random() * 800 + 200);
+    
+    const enrichedDataPoints = dataPointsData.map(dataPoint => {
+      const project = projectsData.find(p => p.id === dataPoint.projectId);
+      const indicator = indicatorsData.find(i => i.id === dataPoint.indicatorId);
+      const user = usersData.find(u => u.id === dataPoint.submittedBy);
+      
+      return {
+        ...dataPoint,
+        projectName: project?.name || 'Unknown Project',
+        indicatorName: indicator?.name || 'Unknown Indicator',
+        submittedByName: user?.name || 'Unknown User'
+      };
+    });
+    
+    return enrichedDataPoints;
+  },
+
+  async getById(id) {
+    await delay(Math.random() * 400 + 100);
+    
+    const dataPoint = dataPointsData.find(dp => dp.id === parseInt(id));
+    if (!dataPoint) {
+      throw new Error(`Data point with id ${id} not found`);
+    }
+    
+    const project = projectsData.find(p => p.id === dataPoint.projectId);
+    const indicator = indicatorsData.find(i => i.id === dataPoint.indicatorId);
+    const user = usersData.find(u => u.id === dataPoint.submittedBy);
+    
+    return {
+      ...dataPoint,
+      projectName: project?.name || 'Unknown Project',
+      indicatorName: indicator?.name || 'Unknown Indicator',
+      submittedByName: user?.name || 'Unknown User'
+    };
+  },
+
+  async getByProjectId(projectId) {
+    await delay(Math.random() * 600 + 200);
+    
+    if (!projectId) {
+      throw new Error('Project ID is required');
+    }
+    
+    const projectDataPoints = dataPointsData.filter(dp => dp.projectId === parseInt(projectId));
+    
+    const enrichedDataPoints = projectDataPoints.map(dataPoint => {
+      const project = projectsData.find(p => p.id === dataPoint.projectId);
+      const indicator = indicatorsData.find(i => i.id === dataPoint.indicatorId);
+      const user = usersData.find(u => u.id === dataPoint.submittedBy);
+      
+      return {
+        ...dataPoint,
+        projectName: project?.name || 'Unknown Project',
+        indicatorName: indicator?.name || 'Unknown Indicator',
+        submittedByName: user?.name || 'Unknown User'
+      };
+    });
+    
+    return enrichedDataPoints;
+  },
+
+  async create(dataPointData) {
+    await delay(Math.random() * 600 + 200);
+    
+    if (!dataPointData.projectId || !dataPointData.indicatorId || !dataPointData.value) {
+      throw new Error('Project ID, Indicator ID, and value are required');
+    }
+    
+    const newDataPoint = {
+      id: Math.max(...dataPointsData.map(dp => dp.id)) + 1,
+      ...dataPointData,
+      submittedAt: new Date().toISOString(),
+      status: 'pending'
+    };
+    
+    return newDataPoint;
+  },
+
+  async update(id, dataPointData) {
+    await delay(Math.random() * 600 + 200);
+    
+    const existingDataPoint = dataPointsData.find(dp => dp.id === parseInt(id));
+    if (!existingDataPoint) {
+      throw new Error(`Data point with id ${id} not found`);
+    }
+    
+    const updatedDataPoint = {
+      ...existingDataPoint,
+      ...dataPointData,
+      updatedAt: new Date().toISOString()
+    };
+    
+    return updatedDataPoint;
+  },
+
+  async delete(id) {
+    await delay(Math.random() * 400 + 100);
+    
+    const existingDataPoint = dataPointsData.find(dp => dp.id === parseInt(id));
+    if (!existingDataPoint) {
+      throw new Error(`Data point with id ${id} not found`);
+    }
+    
+    return { success: true, message: 'Data point deleted successfully' };
+  }
+};
+
+export { dataPointService };
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
