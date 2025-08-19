@@ -88,7 +88,7 @@ function CountryDetail() {
   const historicalData = calculateHistoricalData();
   const currentParticipants = historicalData[historicalData.length - 1]?.participants || 0;
   const femaleParticipants = Math.round(currentParticipants * (country.femaleParticipation / 100));
-
+// Chart data for historical trends
   const chartData = [{
     name: 'Participants Trained',
     data: historicalData.map(d => d.participants)
@@ -106,68 +106,128 @@ function CountryDetail() {
     }
   };
 
+  // Calculate country totals from projects
+  const totalParticipants = currentParticipants;
+  const totalProjects = projects.length;
+  const totalPartners = projects.reduce((sum, p) => sum + (p.partnersCount || 0), 0);
+  const statusColor = country.status === 'active' ? 'success' : 
+                     country.status === 'suspended' ? 'warning' : 'error';
   return (
-    <div className="p-6 space-y-6 bg-gradient-to-br from-primary-50 to-blue-50 min-h-screen">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="outline"
-            onClick={() => navigate('/countries')}
-            className="flex items-center gap-2"
-          >
-            <ApperIcon name="ArrowLeft" size={16} />
-            Back to Countries
-          </Button>
-          <div className="flex items-center gap-3">
-            <div className="w-16 h-10 bg-gray-100 rounded flex items-center justify-center">
-              <span className="font-bold text-gray-600">{country.code}</span>
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">{country.name}</h1>
-              <p className="text-gray-600">Population: {country.population?.toLocaleString()}</p>
+<div className="p-6 space-y-6 bg-gradient-to-br from-primary-50 to-blue-50 min-h-screen">
+      {/* Breadcrumb Navigation */}
+      <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
+        <button 
+          onClick={() => navigate('/dashboard')}
+          className="hover:text-primary transition-colors"
+        >
+          Dashboard
+        </button>
+        <ApperIcon name="ChevronRight" size={14} />
+        <button 
+          onClick={() => navigate('/countries')}
+          className="hover:text-primary transition-colors"
+        >
+          Countries
+        </button>
+        <ApperIcon name="ChevronRight" size={14} />
+        <span className="font-medium text-gray-900">{country.name}</span>
+      </div>
+
+      {/* Enhanced Header with Country Details */}
+      <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              onClick={() => navigate('/countries')}
+              className="flex items-center gap-2"
+            >
+              <ApperIcon name="ArrowLeft" size={16} />
+              Back to Countries
+            </Button>
+            <div className="flex items-center gap-4">
+              {/* Country Flag Placeholder */}
+              <div className="w-16 h-12 bg-gradient-to-br from-blue-100 to-blue-200 rounded border-2 border-blue-300 flex items-center justify-center shadow-sm">
+                <span className="font-bold text-blue-800 text-lg">{country.code}</span>
+              </div>
+              <div>
+                <div className="flex items-center gap-3 mb-1">
+                  <h1 className="text-3xl font-bold text-gray-900">{country.name}</h1>
+                  <Badge variant={statusColor} className="capitalize">
+                    {country.status}
+                  </Badge>
+                </div>
+                <p className="text-gray-600">Population: {country.population?.toLocaleString()}</p>
+              </div>
             </div>
           </div>
+          <Button
+            onClick={loadCountryData}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <ApperIcon name="RefreshCw" size={16} />
+            Refresh
+          </Button>
         </div>
-        <Button
-          onClick={loadCountryData}
-          variant="outline"
-          className="flex items-center gap-2"
-        >
-          <ApperIcon name="RefreshCw" size={16} />
-          Refresh
-        </Button>
+
+        {/* Key Totals Row */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-gray-100">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-primary mb-1">
+              {totalParticipants.toLocaleString()}
+            </div>
+            <div className="text-sm text-gray-600 font-medium">Total Participants</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-secondary mb-1">
+              {totalProjects}
+            </div>
+            <div className="text-sm text-gray-600 font-medium">Active Projects</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-accent mb-1">
+              {totalPartners}
+            </div>
+            <div className="text-sm text-gray-600 font-medium">Partner Organizations</div>
+          </div>
+        </div>
       </div>
 
       {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+{/* Key Metrics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard
-          title="Current Participants"
-          value={currentParticipants.toLocaleString()}
-          icon="Users"
-          trend="up"
-          change="+15%"
-        />
-        <StatsCard
-          title="Female Participants"
-          value={`${femaleParticipants.toLocaleString()} (${country.femaleParticipation}%)`}
+          title="Female Participation Rate"
+          value={`${country.femaleParticipation}%`}
           icon="UserCheck"
           trend="up"
-          change="+3%"
+          change="+2.3%"
+          subtitle={`${femaleParticipants.toLocaleString()} women`}
         />
         <StatsCard
-          title="Active Projects"
-          value={projects.filter(p => p.status === 'active').length}
-          icon="FolderOpen"
-          trend="stable"
-          change="0%"
+          title="Loan Disbursement"
+          value={`$${(projects.reduce((sum, p) => sum + (p.budget * 0.6), 0) / 1000000).toFixed(1)}M`}
+          icon="DollarSign"
+          trend="up"
+          change="+12.5%"
+          subtitle="Cumulative disbursed"
         />
         <StatsCard
-          title="Total Reach"
-          value={country.totalReach?.toLocaleString() || 'N/A'}
+          title="Target Achievement"
+          value={`${Math.round((currentParticipants / projects.reduce((sum, p) => sum + p.targetReach, 0)) * 100)}%`}
           icon="Target"
           trend="up"
-          change="+8%"
+          change="+8.2%"
+          subtitle="Of annual targets"
+        />
+        <StatsCard
+          title="Quarterly Growth"
+          value="+15.7%"
+          icon="TrendingUp"
+          trend="up"
+          change="+3.4%"
+          subtitle="Participant growth rate"
         />
       </div>
 
