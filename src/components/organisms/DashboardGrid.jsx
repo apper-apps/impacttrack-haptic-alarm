@@ -3,6 +3,7 @@ import { useSelector } from "react-redux";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import ApperIcon from "@/components/ApperIcon";
 import Projects from "@/components/pages/Projects";
+import Countries from "@/components/pages/Countries";
 import Error from "@/components/ui/Error";
 import Loading from "@/components/ui/Loading";
 import StatsCard from "@/components/molecules/StatsCard";
@@ -28,8 +29,9 @@ const DashboardGrid = () => {
   }
 
 // Enhanced chart data for comprehensive results visualization
-  const historicalValues = metrics.historicalQuarterly || [11800, 13100, 14200, 12500];
-  const projectedValues = metrics.projectedValues || [13200, 14100, 15000];
+  const historicalValues = metrics?.historicalQuarterly || [11800, 13100, 14200, 12500];
+  const projectedValues = metrics?.projectedValues || [13200, 14100, 15000];
+  const growthRate = metrics?.growthRate || 0.02;
   
   // Predictive analytics chart with trend indicators
   const predictiveChartData = [
@@ -45,7 +47,7 @@ const DashboardGrid = () => {
     },
     {
       name: "Growth Trend",
-      data: historicalValues.map((val, idx) => idx === 0 ? val : val + (metrics.growthRate * 1000 * idx)),
+      data: historicalValues.map((val, idx) => idx === 0 ? val : val + (growthRate * 1000 * idx)),
       type: 'area'
     }
   ];
@@ -127,10 +129,10 @@ const DashboardGrid = () => {
             fontSize: '12px'
           }
         }
-      }],
-      points: metrics.anomalies.map(anomaly => ({
-        x: anomaly.period,
-        y: anomaly.value,
+}],
+      points: (metrics?.anomalies || []).map(anomaly => ({
+        x: anomaly?.period || 'Unknown',
+        y: anomaly?.value || 0,
         marker: {
           size: 8,
           fillColor: '#dc2626',
@@ -157,21 +159,22 @@ const DashboardGrid = () => {
       }
     }
   };
-
-  // Enhanced anomaly detection visual data
-  const anomalies = metrics.anomalies || [];
+// Enhanced anomaly detection visual data
+  const anomalies = metrics?.anomalies || [];
   const hasAnomalies = anomalies.length > 0;
 
   // Country performance chart with enhanced visualization
-  const countryData = data.countries
-    .filter(c => c.status === "active")
+  const countryData = (data?.countries || [])
+    .filter(c => c?.status === "active")
     .slice(0, 8)
     .map(c => {
-      const countryTraining = metrics.countryPerformance?.[c.name] || c.totalReach || 0;
-      const hasAnomaly = anomalies.some(a => a.region === c.name);
-      const performance = countryTraining > (metrics.totalPeopleReached / data.countries.length) ? 'high' : 'normal';
+      const countryTraining = metrics?.countryPerformance?.[c?.name] || c?.totalReach || 0;
+      const hasAnomaly = anomalies.some(a => a?.region === c?.name);
+      const totalReached = metrics?.totalPeopleReached || 1;
+      const countryCount = data?.countries?.length || 1;
+      const performance = countryTraining > (totalReached / countryCount) ? 'high' : 'normal';
       return {
-        name: c.name,
+        name: c?.name || 'Unknown',
         reach: countryTraining,
         hasAnomaly,
         performance,
@@ -179,9 +182,9 @@ const DashboardGrid = () => {
       };
     })
     .sort((a, b) => b.reach - a.reach);
+.sort((a, b) => b.reach - a.reach);
 
 const countryChartData = [
-    {
       name: "Current Performance",
       data: countryData.map(c => c.reach)
     },
@@ -249,10 +252,12 @@ const countryChartData = [
     }
   };
 
-  // Performance insights chart data
+// Performance insights chart data
   const performanceInsights = {
-    growth: ((projectedValues[0] - historicalValues[historicalValues.length - 1]) / historicalValues[historicalValues.length - 1] * 100).toFixed(1),
-    trend: metrics.growthRate > 0 ? 'positive' : 'negative',
+    growth: historicalValues.length > 0 && projectedValues.length > 0
+      ? ((projectedValues[0] - historicalValues[historicalValues.length - 1]) / historicalValues[historicalValues.length - 1] * 100).toFixed(1)
+      : '0.0',
+    trend: (metrics?.growthRate || 0) > 0 ? 'positive' : 'negative',
     topPerformer: countryData[0]?.name || 'N/A',
     anomaliesCount: anomalies.length
   };
@@ -292,10 +297,10 @@ return (
       )}
 
 {/* Results Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard
           title="Total People Reached"
-          value={metrics.totalPeopleReached}
+          value={metrics?.totalPeopleReached || 0}
           change="+12.5%"
           changeType="positive"
           icon="Users"
@@ -304,7 +309,7 @@ return (
         
         <StatsCard
           title="Female Participation"
-          value={metrics.femaleParticipationRate}
+          value={metrics?.femaleParticipationRate || 0}
           unit="%"
           change="+2.1%"
           changeType="positive"
@@ -381,21 +386,21 @@ return (
           <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
             <h3 className="text-lg font-semibold text-gray-900 mb-6">Target Achievement</h3>
             <div className="space-y-6">
-              <ProgressRing
-                progress={Math.round((metrics.totalPeopleReached / 500000) * 100)}
+<ProgressRing
+                progress={Math.round(((metrics?.totalPeopleReached || 0) / 500000) * 100)}
                 title="People Trained"
-                subtitle={`${metrics.totalPeopleReached.toLocaleString()} / 500K`}
+                subtitle={`${(metrics?.totalPeopleReached || 0).toLocaleString()} / 500K`}
                 color="#667eea"
                 size={120}
               />
               
               <div className="grid grid-cols-2 gap-4">
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-success">{metrics.activeProjects}</div>
+                  <div className="text-2xl font-bold text-success">{metrics?.activeProjects || 0}</div>
                   <div className="text-xs text-gray-600">Active Projects</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-2xl font-bold text-primary">{metrics.totalWomenParticipants.toLocaleString()}</div>
+                  <div className="text-2xl font-bold text-primary">{(metrics?.totalWomenParticipants || 0).toLocaleString()}</div>
                   <div className="text-xs text-gray-600">Women Reached</div>
                 </div>
               </div>
@@ -405,9 +410,9 @@ return (
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-gray-700">Growth Rate</span>
                   <span className={`text-sm font-bold ${
-                    metrics.growthRate > 0 ? 'text-success' : 'text-error'
+                    (metrics?.growthRate || 0) > 0 ? 'text-success' : 'text-error'
                   }`}>
-                    {(metrics.growthRate * 100).toFixed(1)}%
+                    {((metrics?.growthRate || 0) * 100).toFixed(1)}%
                   </span>
                 </div>
                 <div className="mt-2 text-xs text-gray-600">
