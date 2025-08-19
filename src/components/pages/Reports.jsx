@@ -363,7 +363,7 @@ setGenerating(true);
           Custom Builder
         </button>
         <button
-          onClick={() => setActiveTab("history")}
+onClick={() => setActiveTab("history")}
           className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
             activeTab === "history"
               ? "bg-white text-primary shadow-sm"
@@ -372,6 +372,18 @@ setGenerating(true);
         >
           <ApperIcon name="Archive" size={16} className="mr-2 inline" />
           Report History
+        </button>
+        
+        <button
+          onClick={() => setActiveTab("scheduled")}
+          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            activeTab === "scheduled"
+              ? "bg-white text-primary shadow-sm"
+              : "text-gray-600 hover:text-gray-900"
+          }`}
+        >
+          <ApperIcon name="Calendar" size={16} className="mr-2 inline" />
+          Scheduled Reports
         </button>
       </div>
 
@@ -873,6 +885,493 @@ setGenerating(true);
               )}
             </div>
 </Card>
+</div>
+        </>
+      )}
+
+      {/* Scheduled Reports Tab */}
+      {activeTab === "scheduled" && (
+        <>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Create Schedule Form */}
+          <div className="lg:col-span-2">
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Create Scheduled Report</h3>
+                  <p className="text-sm text-gray-600 mt-1">Set up automated report generation and delivery</p>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => toast.info("Import schedule feature will be available in future updates")}
+                >
+                  <ApperIcon name="Upload" size={16} className="mr-2" />
+                  Import Schedule
+                </Button>
+              </div>
+
+              <div className="space-y-6">
+                {/* Basic Information */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Schedule Name <span className="text-red-500">*</span>
+                    </label>
+                    <Input
+                      placeholder="e.g., Monthly Progress Report"
+                      className="w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Report Template <span className="text-red-500">*</span>
+                    </label>
+                    <Select className="w-full">
+                      <option value="">Select template</option>
+                      <option value="progress">Progress Report</option>
+                      <option value="impact">Impact Assessment</option>
+                      <option value="financial">Financial Summary</option>
+                      <option value="dashboard">Dashboard Export</option>
+                      <option value="custom">Custom Report</option>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Schedule Configuration */}
+                <div className="border-t pt-6">
+                  <h4 className="text-md font-medium text-gray-900 mb-4">Schedule Configuration</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Frequency <span className="text-red-500">*</span>
+                      </label>
+                      <Select className="w-full">
+                        <option value="">Select frequency</option>
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                        <option value="quarterly">Quarterly</option>
+                        <option value="yearly">Yearly</option>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Day of Week/Month
+                      </label>
+                      <Select className="w-full">
+                        <option value="">Auto (End of period)</option>
+                        <option value="1">1st</option>
+                        <option value="15">15th</option>
+                        <option value="last">Last day</option>
+                        <option value="monday">Monday</option>
+                        <option value="friday">Friday</option>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Time (24h format)
+                      </label>
+                      <Input
+                        type="time"
+                        defaultValue="09:00"
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Delivery Settings */}
+                <div className="border-t pt-6">
+                  <h4 className="text-md font-medium text-gray-900 mb-4">Delivery Settings</h4>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Email Recipients <span className="text-red-500">*</span>
+                      </label>
+                      <Input
+                        placeholder="Enter email addresses separated by commas"
+                        className="w-full"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Separate multiple emails with commas
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Format
+                        </label>
+                        <Select className="w-full">
+                          <option value="pdf">PDF</option>
+                          <option value="excel">Excel</option>
+                          <option value="both">Both PDF & Excel</option>
+                        </Select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Email Subject
+                        </label>
+                        <Input
+                          placeholder="Automated Report: [Report Name] - [Date]"
+                          className="w-full"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Filters */}
+                <div className="border-t pt-6">
+                  <h4 className="text-md font-medium text-gray-900 mb-4">Report Filters</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Country
+                      </label>
+                      <Select className="w-full">
+                        <option value="">All Countries</option>
+                        <option value="BD">Bangladesh</option>
+                        <option value="PH">Philippines</option>
+                        <option value="AU">Australia</option>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Project
+                      </label>
+                      <Select className="w-full">
+                        <option value="">All Projects</option>
+                        <option value="1">Financial Inclusion Program</option>
+                        <option value="2">Rural Development Initiative</option>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Date Range
+                      </label>
+                      <Select className="w-full">
+                        <option value="current">Current Period</option>
+                        <option value="previous">Previous Period</option>
+                        <option value="ytd">Year to Date</option>
+                        <option value="custom">Custom Range</option>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="border-t pt-6 flex justify-end space-x-3">
+                  <Button 
+                    variant="outline"
+                    onClick={() => toast.info("Schedule preview will be available in future updates")}
+                  >
+                    <ApperIcon name="Eye" size={16} className="mr-2" />
+                    Preview
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    onClick={() => toast.info("Schedule saved as draft")}
+                  >
+                    <ApperIcon name="Save" size={16} className="mr-2" />
+                    Save Draft
+                  </Button>
+                  <Button 
+                    onClick={() => toast.success("Scheduled report created successfully!")}
+                  >
+                    <ApperIcon name="Calendar" size={16} className="mr-2" />
+                    Create Schedule
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          {/* Schedule Summary & Quick Actions */}
+          <div className="space-y-6">
+            {/* Quick Stats */}
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Schedule Overview</h3>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Active Schedules</span>
+                  <span className="text-lg font-semibold text-primary">3</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Reports This Month</span>
+                  <span className="text-lg font-semibold text-secondary">12</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Next Report</span>
+                  <span className="text-sm font-medium text-gray-900">Tomorrow 9:00 AM</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">Success Rate</span>
+                  <span className="text-lg font-semibold text-success">98.5%</span>
+                </div>
+              </div>
+            </Card>
+
+            {/* Quick Actions */}
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+              <div className="space-y-3">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => toast.info("Template import will be available in future updates")}
+                >
+                  <ApperIcon name="Download" size={16} className="mr-2" />
+                  Import Templates
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => toast.info("Bulk schedule creation will be available in future updates")}
+                >
+                  <ApperIcon name="Upload" size={16} className="mr-2" />
+                  Bulk Create
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => toast.info("Schedule export will be available in future updates")}
+                >
+                  <ApperIcon name="FileText" size={16} className="mr-2" />
+                  Export Schedules
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => toast.info("Delivery logs will be available in future updates")}
+                >
+                  <ApperIcon name="Clock" size={16} className="mr-2" />
+                  View Delivery Logs
+                </Button>
+              </div>
+            </Card>
+          </div>
+        </div>
+
+        {/* Active Schedules List */}
+        <div className="mt-8">
+          <Card className="overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Active Schedules</h3>
+                  <p className="text-sm text-gray-600 mt-1">Manage your automated report schedules</p>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Input
+                    placeholder="Search schedules..."
+                    className="w-64"
+                  />
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => toast.info("Schedule filters will be available in future updates")}
+                  >
+                    <ApperIcon name="Filter" size={16} className="mr-2" />
+                    Filter
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Schedule
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Frequency
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Next Run
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Recipients
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  <tr>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">Monthly Progress Report</div>
+                        <div className="text-sm text-gray-500">Progress Template • All Countries</div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">Monthly</div>
+                      <div className="text-sm text-gray-500">1st @ 09:00</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">Dec 1, 2024</div>
+                      <div className="text-sm text-gray-500">in 5 days</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">3 recipients</div>
+                      <div className="text-sm text-gray-500">PDF, Excel</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        <ApperIcon name="CheckCircle" size={12} className="mr-1" />
+                        Active
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                      <button 
+                        className="text-primary hover:text-secondary"
+                        onClick={() => toast.info("Edit schedule will be available in future updates")}
+                      >
+                        <ApperIcon name="Edit" size={16} />
+                      </button>
+                      <button 
+                        className="text-gray-400 hover:text-gray-600"
+                        onClick={() => toast.info("Schedule paused")}
+                      >
+                        <ApperIcon name="Pause" size={16} />
+                      </button>
+                      <button 
+                        className="text-red-400 hover:text-red-600"
+                        onClick={() => toast.success("Schedule deleted successfully")}
+                      >
+                        <ApperIcon name="Trash" size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">Weekly Dashboard Export</div>
+                        <div className="text-sm text-gray-500">Dashboard Template • Bangladesh</div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">Weekly</div>
+                      <div className="text-sm text-gray-500">Friday @ 17:00</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">Nov 29, 2024</div>
+                      <div className="text-sm text-gray-500">Tomorrow</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">5 recipients</div>
+                      <div className="text-sm text-gray-500">PDF</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        <ApperIcon name="CheckCircle" size={12} className="mr-1" />
+                        Active
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                      <button 
+                        className="text-primary hover:text-secondary"
+                        onClick={() => toast.info("Edit schedule will be available in future updates")}
+                      >
+                        <ApperIcon name="Edit" size={16} />
+                      </button>
+                      <button 
+                        className="text-gray-400 hover:text-gray-600"
+                        onClick={() => toast.info("Schedule paused")}
+                      >
+                        <ApperIcon name="Pause" size={16} />
+                      </button>
+                      <button 
+                        className="text-red-400 hover:text-red-600"
+                        onClick={() => toast.success("Schedule deleted successfully")}
+                      >
+                        <ApperIcon name="Trash" size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">Quarterly Impact Assessment</div>
+                        <div className="text-sm text-gray-500">Impact Template • All Projects</div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">Quarterly</div>
+                      <div className="text-sm text-gray-500">Last day @ 12:00</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">Dec 31, 2024</div>
+                      <div className="text-sm text-gray-500">in 1 month</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">8 recipients</div>
+                      <div className="text-sm text-gray-500">PDF, Excel</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                        <ApperIcon name="Pause" size={12} className="mr-1" />
+                        Paused
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                      <button 
+                        className="text-primary hover:text-secondary"
+                        onClick={() => toast.info("Edit schedule will be available in future updates")}
+                      >
+                        <ApperIcon name="Edit" size={16} />
+                      </button>
+                      <button 
+                        className="text-green-400 hover:text-green-600"
+                        onClick={() => toast.success("Schedule resumed")}
+                      >
+                        <ApperIcon name="Play" size={16} />
+                      </button>
+                      <button 
+                        className="text-red-400 hover:text-red-600"
+                        onClick={() => toast.success("Schedule deleted successfully")}
+                      >
+                        <ApperIcon name="Trash" size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div className="px-6 py-4 border-t border-gray-200">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-gray-500">
+                  Showing 3 of 3 schedules
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => toast.info("Bulk actions will be available in future updates")}
+                  >
+                    <ApperIcon name="Settings" size={16} className="mr-2" />
+                    Bulk Actions
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => toast.info("Run all schedules will be available in future updates")}
+                  >
+                    <ApperIcon name="Play" size={16} className="mr-2" />
+                    Run All
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </Card>
         </div>
         </>
       )}

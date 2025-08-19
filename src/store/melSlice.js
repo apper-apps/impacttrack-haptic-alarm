@@ -40,7 +40,7 @@ bulkImport: {
     },
     draft: {}
   },
-  reports: {
+reports: {
     queue: [],
     history: [],
     templates: {
@@ -51,6 +51,15 @@ bulkImport: {
       totalGenerated: 0,
       monthlyCount: 0,
       popularFormats: []
+    },
+    scheduled: {
+      schedules: [],
+      loading: false,
+      error: null,
+      activeCount: 3,
+      totalRuns: 0,
+      successRate: 98.5,
+      nextRun: null
     }
   }
 };
