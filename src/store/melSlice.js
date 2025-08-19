@@ -133,6 +133,36 @@ clearBulkImportState: (state) => {
         autoSave: { lastSaved: null, isDirty: false, interval: 30000 },
         validation: { errors: {}, isValid: true },
         draft: {}
+};
+    },
+    // Real-time dashboard metric updates upon approval
+    updateDashboardMetrics: (state, action) => {
+      const { metrics } = action.payload;
+      state.dashboard = {
+        ...state.dashboard,
+        metrics: {
+          ...state.dashboard?.metrics,
+          ...metrics
+        },
+        lastUpdated: new Date().toISOString()
+      };
+    },
+    refreshDashboardData: (state) => {
+      state.dashboard = {
+        ...state.dashboard,
+        needsRefresh: true,
+        lastRefreshTrigger: new Date().toISOString()
+      };
+    },
+    setApprovalStatus: (state, action) => {
+      const { dataPointId, status, approvedBy } = action.payload;
+      state.approvals = {
+        ...state.approvals,
+        [dataPointId]: {
+          status,
+          approvedBy,
+          approvedAt: new Date().toISOString()
+        }
       };
     },
     setReportQueue: (state, action) => {
@@ -196,7 +226,7 @@ export const {
   setBulkImportLoading,
   setBulkImportProgress,
   setBulkImportError,
-clearBulkImportState,
+  clearBulkImportState,
   setDataEntryProgress,
   setDataEntryAutoSave,
   setDataEntryValidation,
@@ -207,6 +237,9 @@ clearBulkImportState,
   addReportToHistory,
   removeReportFromHistory,
   updateTemplateUsage,
-  clearReportsState
+  clearReportsState,
+  updateDashboardMetrics,
+  refreshDashboardData,
+  setApprovalStatus
 } = melSlice.actions;
 export default melSlice.reducer;

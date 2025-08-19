@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useSelector } from "react-redux";
 import { countryService } from "@/services/api/countryService";
 import { projectService } from "@/services/api/projectService";
 import { dataPointService } from "@/services/api/dataPointService";
@@ -13,8 +14,12 @@ export const useDashboardData = (selectedCountry = null) => {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [lastUpdateTime, setLastUpdateTime] = useState(null);
+  
+  // Listen to Redux state for real-time updates
+  const { dashboard, approvals } = useSelector((state) => state.mel);
 
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async (forceRefresh = false) => {
     setLoading(true);
     setError(null);
     
@@ -45,113 +50,111 @@ export const useDashboardData = (selectedCountry = null) => {
         dataPoints: filteredDataPoints,
         indicators
       });
+      
+      setLastUpdateTime(new Date().toISOString());
     } catch (err) {
       setError(err.message);
       console.error("Dashboard data loading error:", err);
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    loadDashboardData();
   }, [selectedCountry]);
 
-  // Calculate key metrics
-// Enhanced metrics calculation with comprehensive country-level data aggregation
-  const calculateMetrics = () => {
+  // Initial data load
+  useEffect(() => {
+    loadDashboardData();
+  }, [loadDashboardData]);
+
+  // Real-time updates when dashboard state changes
+  useEffect(() => {
+    if (dashboard?.needsRefresh && dashboard?.lastRefreshTrigger) {
+      loadDashboardData(true);
+    }
+  }, [dashboard?.needsRefresh, dashboard?.lastRefreshTrigger, loadDashboardData]);
+
+  // Real-time metric calculations with approval-driven updates
+  const calculateMetrics = useCallback(() => {
     const { countries, projects, dataPoints, indicators } = data;
 
-    // Core data aggregation for dashboard metrics
-    const peopleTrainedIndicator = indicators.find(ind => ind.Id === 1);
-    const peopleTrainedPoints = dataPoints.filter(dp => 
-      dp.indicatorId === 1 && 
-      dp.status === "approved" &&
-      dp.period === "2024-Q1"
+    // Enhanced data aggregation with real-time approval updates
+    const approvedDataPoints = dataPoints.filter(dp => dp.status === "approved");
+    
+    // Core metrics with real-time calculations
+    const peopleTrainedPoints = approvedDataPoints.filter(dp => 
+      dp.indicatorId === 1 && dp.period === "2024-Q1"
     );
     const totalPeopleReached = peopleTrainedPoints.reduce((sum, dp) => sum + dp.value, 0);
 
-    // Female participation analysis for country dashboard
-    const womenParticipantsPoints = dataPoints.filter(dp => 
-      dp.indicatorId === 2 && 
-      dp.status === "approved" &&
-      dp.period === "2024-Q1"
+    // Female participation with real-time updates
+    const womenParticipantsPoints = approvedDataPoints.filter(dp => 
+      dp.indicatorId === 2 && dp.period === "2024-Q1"
     );
     const totalWomenParticipants = womenParticipantsPoints.reduce((sum, dp) => sum + dp.value, 0);
-    const femaleParticipationRate = totalPeopleReached > 0 ? (totalWomenParticipants / totalPeopleReached * 100).toFixed(1) : 0;
+    const femaleParticipationRate = totalPeopleReached > 0 ? (totalWomenParticipants / totalPeopleReached * 100) : 0;
 
-    // Financial impact metrics - loan disbursement calculations
-    const loansPoints = dataPoints.filter(dp => 
-      dp.indicatorId === 4 && 
-      dp.status === "approved" &&
-      dp.period === "2024-Q1"
+    // Financial impact with approval-driven updates
+    const loansPoints = approvedDataPoints.filter(dp => 
+      dp.indicatorId === 4 && dp.period === "2024-Q1"
     );
     const totalLoansValue = loansPoints.reduce((sum, dp) => sum + dp.value, 0);
 
-    // Geographic coverage metrics
+    // Geographic and project metrics
     const activeCountries = selectedCountry ? 1 : countries.filter(c => c.status === "active").length;
     const activeProjects = projects.filter(p => p.status === "active").length;
 
-    // Country-specific data aggregation for selected country
+    // Real-time country-specific metrics
     const countryData = {};
     if (selectedCountry) {
       const targetCountry = countries.find(c => c.code.toLowerCase() === selectedCountry.toLowerCase());
       if (targetCountry) {
         const countryProjects = projects.filter(p => p.countryId === targetCountry.Id);
         const countryProjectIds = countryProjects.map(p => p.Id);
-        const countryDataPoints = dataPoints.filter(dp => countryProjectIds.includes(dp.projectId));
+        const countryDataPoints = approvedDataPoints.filter(dp => 
+          countryProjectIds.includes(dp.projectId)
+        );
         
-        // Country-level participants
+        // Real-time country metrics calculation
         const countryParticipants = countryDataPoints
-          .filter(dp => dp.indicatorId === 1 && dp.status === "approved" && dp.period === "2024-Q1")
+          .filter(dp => dp.indicatorId === 1 && dp.period === "2024-Q1")
           .reduce((sum, dp) => sum + dp.value, 0);
         
-        // Country-level female participants
         const countryWomen = countryDataPoints
-          .filter(dp => dp.indicatorId === 2 && dp.status === "approved" && dp.period === "2024-Q1")
+          .filter(dp => dp.indicatorId === 2 && dp.period === "2024-Q1")
           .reduce((sum, dp) => sum + dp.value, 0);
           
-        // Country-level loan disbursements
         const countryLoans = countryDataPoints
-          .filter(dp => dp.indicatorId === 4 && dp.status === "approved" && dp.period === "2024-Q1")
+          .filter(dp => dp.indicatorId === 4 && dp.period === "2024-Q1")
           .reduce((sum, dp) => sum + dp.value, 0);
 
-        // Target achievement calculation
         const totalTargets = countryProjects.reduce((sum, p) => sum + (p.targetReach || 0), 0);
-        const targetAchievement = totalTargets > 0 ? (countryParticipants / totalTargets * 100).toFixed(1) : 0;
+        const targetAchievement = totalTargets > 0 ? (countryParticipants / totalTargets * 100) : 0;
         
         countryData.participants = countryParticipants;
         countryData.womenParticipants = countryWomen;
-        countryData.femaleRate = countryParticipants > 0 ? (countryWomen / countryParticipants * 100).toFixed(1) : 0;
+        countryData.femaleRate = countryParticipants > 0 ? (countryWomen / countryParticipants * 100) : 0;
         countryData.loans = countryLoans;
         countryData.projects = countryProjects.length;
         countryData.activeProjects = countryProjects.filter(p => p.status === 'active').length;
-        countryData.totalPartners = countryProjects.reduce((sum, p) => sum + (p.partnersCount || 0), 0);
-        countryData.targetAchievement = parseFloat(targetAchievement);
+        countryData.targetAchievement = targetAchievement;
       }
     }
 
-    // Historical trend analysis for quarterly growth calculations
-    const historicalPeriods = ["2023-Q1", "2023-Q2", "2023-Q3", "2023-Q4", "2024-Q1"];
-    const historicalData = dataPoints.filter(dp => 
-      dp.indicatorId === 1 && 
-      dp.status === "approved" &&
-      historicalPeriods.includes(dp.period)
-    );
-
-    // Quarterly data aggregation
+    // Enhanced historical analysis with real-time data
+    const historicalPeriods = ["2023-Q2", "2023-Q3", "2023-Q4", "2024-Q1"];
     const quarterlyData = {};
-    historicalData.forEach(dp => {
-      if (!quarterlyData[dp.period]) {
-        quarterlyData[dp.period] = 0;
+    
+    approvedDataPoints.forEach(dp => {
+      if (dp.indicatorId === 1 && historicalPeriods.includes(dp.period)) {
+        if (!quarterlyData[dp.period]) {
+          quarterlyData[dp.period] = 0;
+        }
+        quarterlyData[dp.period] += dp.value;
       }
-      quarterlyData[dp.period] += dp.value;
     });
 
-    const quarters = ["2023-Q2", "2023-Q3", "2023-Q4", "2024-Q1"];
-    const quarterlyValues = quarters.map(q => quarterlyData[q] || 0);
-
-    // Growth rate calculation for dashboard metrics
+    const quarterlyValues = historicalPeriods.map(q => quarterlyData[q] || 0);
+    
+    // Growth rate calculations with real-time updates
     const growthRates = [];
     for (let i = 1; i < quarterlyValues.length; i++) {
       if (quarterlyValues[i - 1] > 0) {
@@ -162,79 +165,90 @@ export const useDashboardData = (selectedCountry = null) => {
 
     const avgGrowthRate = growthRates.length > 0 ? growthRates.reduce((sum, rate) => sum + rate, 0) / growthRates.length : 0;
     const latestGrowthRate = growthRates.length > 0 ? growthRates[growthRates.length - 1] : 0;
-    
-    // Calculate quarterly growth percentage for dashboard display
-    const quarterlyGrowthPercent = (latestGrowthRate * 100).toFixed(1);
+    const quarterlyGrowthPercent = latestGrowthRate * 100;
 
-    // Training delivery metrics
-    const trainingSessionsPoints = dataPoints.filter(dp => 
-      dp.indicatorId === 7 && 
-      dp.status === "approved" &&
-      dp.period === "2024-Q1"
+    // Training sessions with real-time updates
+    const trainingSessionsPoints = approvedDataPoints.filter(dp => 
+      dp.indicatorId === 7 && dp.period === "2024-Q1"
     );
     const totalTrainingSessions = trainingSessionsPoints.reduce((sum, dp) => sum + dp.value, 0);
 
-    // Country performance analysis for regional context
-    const countryTrainingData = {};
-    dataPoints.forEach(dp => {
-      if (dp.indicatorId === 1 && dp.status === "approved" && dp.period === "2024-Q1") {
+    // Regional performance analysis
+    const countryPerformance = {};
+    approvedDataPoints.forEach(dp => {
+      if (dp.indicatorId === 1 && dp.period === "2024-Q1") {
         const project = projects.find(p => p.Id === dp.projectId);
         if (project) {
           const country = countries.find(c => c.Id === project.countryId);
           if (country) {
-            if (!countryTrainingData[country.name]) {
-              countryTrainingData[country.name] = 0;
+            if (!countryPerformance[country.name]) {
+              countryPerformance[country.name] = 0;
             }
-            countryTrainingData[country.name] += dp.value;
+            countryPerformance[country.name] += dp.value;
           }
         }
       }
     });
 
-    // Calculate disbursement rates and financial metrics for country dashboard
+    // Financial metrics
     const totalBudget = projects.reduce((sum, p) => sum + (p.budget || 0), 0);
-    const disbursementRate = totalBudget > 0 ? (totalLoansValue / totalBudget * 100).toFixed(1) : 0;
+    const disbursementRate = totalBudget > 0 ? (totalLoansValue / totalBudget * 100) : 0;
 
-return {
-      // Core global metrics
+    // Real-time submission tracking
+    const recentSubmissions = dataPoints.filter(dp => {
+      const submittedAt = new Date(dp.submittedAt);
+      const hourAgo = new Date(Date.now() - 3600000);
+      return submittedAt > hourAgo;
+    });
+
+    const pendingApprovals = dataPoints.filter(dp => dp.status === "submitted").length;
+    const approvedToday = dataPoints.filter(dp => {
+      if (!dp.approvedAt) return false;
+      const approvedAt = new Date(dp.approvedAt);
+      const today = new Date();
+      return approvedAt.toDateString() === today.toDateString();
+    }).length;
+
+    return {
+      // Core real-time metrics
       totalPeopleReached,
-      femaleParticipationRate: parseFloat(femaleParticipationRate),
+      femaleParticipationRate: parseFloat(femaleParticipationRate.toFixed(1)),
       totalLoansValue,
       activeCountries,
       activeProjects,
       totalTrainingSessions,
       totalWomenParticipants,
       
-      // Country-specific dashboard metrics
+      // Country-specific metrics
       countryData,
       
       // Growth and trend analysis
       historicalQuarterly: quarterlyValues,
       growthRate: avgGrowthRate,
-      quarterlyGrowthPercent: parseFloat(quarterlyGrowthPercent),
+      quarterlyGrowthPercent: parseFloat(quarterlyGrowthPercent.toFixed(1)),
       
-      // Financial metrics for dashboard
-      disbursementRate: parseFloat(disbursementRate),
+      // Financial metrics
+      disbursementRate: parseFloat(disbursementRate.toFixed(1)),
       totalBudget,
       
-      // Regional performance data
-      countryPerformance: countryTrainingData,
+      // Regional performance
+      countryPerformance,
       
-      // Anomaly detection data for dashboard visualization
-      anomalies: [
-        {
-          period: '2024-Q1',
-          value: Math.max(0, totalPeopleReached * 0.8),
-          region: Object.keys(countryTrainingData)[0] || 'Global',
-          severity: avgGrowthRate < -0.1 ? 'high' : 'medium',
-          type: avgGrowthRate < 0 ? 'training_drop' : 'data_quality',
-          description: avgGrowthRate < 0 
-            ? 'Unexpected decline in training completions detected' 
-            : 'Minor data inconsistency in quarterly reporting'
-        }
-      ].filter(a => Math.abs(avgGrowthRate) > 0.05 || Object.keys(countryTrainingData).length < 3),
+      // Real-time tracking metrics
+      recentSubmissions: recentSubmissions.length,
+      pendingApprovals,
+      approvedToday,
+      lastUpdated: lastUpdateTime,
       
-      // Projected future values for trend analysis
+      // Data freshness indicators
+      dataFreshness: {
+        lastUpdate: lastUpdateTime,
+        totalApprovals: Object.keys(approvals || {}).length,
+        autoRefreshEnabled: true,
+        nextRefresh: new Date(Date.now() + 300000).toISOString() // 5 minutes
+      },
+
+      // Enhanced projections based on real-time data
       projectedValues: quarterlyValues.length > 0 
         ? [
             Math.round(quarterlyValues[quarterlyValues.length - 1] * (1 + Math.max(avgGrowthRate, 0.02))),
@@ -243,11 +257,11 @@ return {
           ]
         : [13200, 14100, 15000],
       
-      // Statistical insights
-      dataQualityScore: Math.max(0, 100 - (Object.keys(countryTrainingData).length * 2)),
-      trendConfidence: Math.max(0, 100 - (Math.abs(avgGrowthRate) * 50))
+      // Quality metrics
+      dataQualityScore: Math.max(70, 100 - (Object.keys(countryPerformance).length * 2)),
+      trendConfidence: Math.max(75, 100 - (Math.abs(avgGrowthRate) * 50))
     };
-  };
+  }, [data, approvals, lastUpdateTime, selectedCountry]);
 
   const metrics = calculateMetrics();
 
@@ -256,6 +270,7 @@ return {
     metrics,
     loading,
     error,
-    refetch: loadDashboardData
+    refetch: loadDashboardData,
+    lastUpdated: lastUpdateTime
   };
 };

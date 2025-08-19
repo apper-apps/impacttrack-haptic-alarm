@@ -1,10 +1,20 @@
-import React from "react";
-import { useSelector } from "react-redux";
+import React, { useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { useDashboardData } from "@/hooks/useDashboardData";
 import DashboardGrid from "@/components/organisms/DashboardGrid";
 import ApperIcon from "@/components/ApperIcon";
 
 const Dashboard = () => {
-  const { currentUser, selectedCountry } = useSelector((state) => state.mel);
+  const dispatch = useDispatch();
+  const { currentUser, selectedCountry, dashboard } = useSelector((state) => state.mel);
+  const { data, metrics, loading, error, refetch } = useDashboardData(selectedCountry?.code);
+
+  // Real-time dashboard updates upon approval
+  useEffect(() => {
+    if (dashboard?.needsRefresh) {
+      refetch();
+    }
+  }, [dashboard?.needsRefresh, refetch]);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -63,16 +73,19 @@ const Dashboard = () => {
           </div>
           <div className="hidden md:flex items-center space-x-4">
 <div className="bg-white/10 backdrop-blur rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold">{selectedCountry ? 1 : '10'}</div>
+              <div className="text-2xl font-bold">{metrics?.activeCountries || (selectedCountry ? 1 : '10')}</div>
               <div className="text-xs text-primary-200">Active Countries</div>
             </div>
             <div className="bg-white/10 backdrop-blur rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold">25</div>
+              <div className="text-2xl font-bold">{metrics?.activeProjects || 25}</div>
               <div className="text-xs text-primary-200">Projects</div>
             </div>
             <div className="bg-white/10 backdrop-blur rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold">3.5M</div>
-              <div className="text-xs text-primary-200">Target Reach</div>
+              <div className="text-2xl font-bold">{metrics?.totalPeopleReached ? (metrics.totalPeopleReached / 1000000).toFixed(1) + 'M' : '3.5M'}</div>
+              <div className="text-xs text-primary-200">People Reached</div>
+              <div className="text-xs text-primary-300 mt-1">
+                {dashboard?.lastUpdated && `Updated ${new Date(dashboard.lastUpdated).toLocaleTimeString()}`}
+              </div>
             </div>
           </div>
         </div>

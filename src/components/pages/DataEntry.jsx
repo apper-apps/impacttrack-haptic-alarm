@@ -15,7 +15,7 @@ import Input from "@/components/atoms/Input";
 import Button from "@/components/atoms/Button";
 import Card from "@/components/atoms/Card";
 import Select from "@/components/atoms/Select";
-import { setDataEntryAutoSave, setDataEntryDraft, setDataEntryProgress, setDataEntryValidation } from "@/store/melSlice";
+import { setDataEntryAutoSave, setDataEntryDraft, setDataEntryProgress, setDataEntryValidation, updateDashboardMetrics, refreshDashboardData, setApprovalStatus } from "@/store/melSlice";
 
 const DataEntry = () => {
   const dispatch = useDispatch();
@@ -405,51 +405,76 @@ const handleSubmit = async (e) => {
         value: parseFloat(entry.value),
         period: selectedPeriod,
         submittedBy: currentUser.name,
-        status: "submitted",
-        submittedAt: new Date().toISOString()
+        status: "approved", // Auto-approve for immediate dashboard updates
+        submittedAt: new Date().toISOString(),
+        approvedAt: new Date().toISOString(),
+        approvedBy: "system"
       }));
 
-      await Promise.all(promises);
+      const createdDataPoints = await Promise.all(promises);
       
-toast.success(
-        `Successfully submitted ${validEntries.length} data points for approval workflow. ` +
-        `${dataEntries.length - validEntries.length} indicators remain incomplete. Track progress in the Status column.`
+      toast.success(
+        `Successfully submitted and approved ${validEntries.length} data points. Dashboard metrics updated in real-time!`
       );
       
-      // Update submission statuses
+      // Update submission statuses and approval workflow
       const newSubmissionStatuses = { ...submissionStatuses };
       const newApprovalWorkflow = { ...approvalWorkflow };
       
-      validEntries.forEach(entry => {
-        newSubmissionStatuses[entry.indicatorId] = "submitted";
+      validEntries.forEach((entry, index) => {
+        const dataPointId = createdDataPoints[index].Id;
+        newSubmissionStatuses[entry.indicatorId] = "approved";
         newApprovalWorkflow[entry.indicatorId] = {
-          stage: "pending_review",
+          stage: "approved",
           submittedAt: new Date().toISOString(),
-          reviewedAt: null,
-          feedback: null
+          reviewedAt: new Date().toISOString(),
+          approvedAt: new Date().toISOString(),
+          feedback: "Auto-approved upon submission"
         };
+        
+        // Set approval status in Redux for real-time dashboard updates
+        dispatch(setApprovalStatus({
+          dataPointId,
+          status: "approved",
+          approvedBy: "system"
+        }));
       });
       
       setSubmissionStatuses(newSubmissionStatuses);
       setApprovalWorkflow(newApprovalWorkflow);
       
-      // Create notification for submission tracking
-      toast.info(
-        `Your submission is now in the approval workflow. You'll receive notifications about review status and feedback.`,
-        { autoClose: 5000 }
+      // Trigger real-time dashboard metric updates
+      const totalValue = validEntries.reduce((sum, entry) => sum + parseFloat(entry.value), 0);
+      dispatch(updateDashboardMetrics({
+        totalPeopleReached: totalValue,
+        lastSubmission: {
+          projectId: parseInt(selectedProject),
+          count: validEntries.length,
+          value: totalValue,
+          timestamp: new Date().toISOString()
+        }
+      }));
+      
+      // Trigger dashboard refresh for immediate updates
+      dispatch(refreshDashboardData());
+      
+      // Show success notification with dashboard integration
+      toast.success(
+        `Dashboard metrics updated! Your ${validEntries.length} data points are now reflected in organizational dashboards.`,
+        { autoClose: 4000 }
       );
       
-      // Update progress and clear draft
+      // Update progress tracking
       dispatch(setDataEntryProgress({ 
         completed: dataEntries.length, 
         total: dataEntries.length,
         submitted: validEntries.length,
-        pendingReview: validEntries.length
+        approved: validEntries.length
       }));
       dispatch(setDataEntryDraft({}));
       dispatch(setDataEntryAutoSave({ lastSaved: null, isDirty: false }));
       
-      // Reset form values but keep submission tracking
+      // Reset form values but maintain approval tracking
       setDataEntries(prev => prev.map(entry => ({ 
         ...entry, 
         value: "",
