@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { format, parseISO } from "date-fns";
 import { countryService } from "@/services/api/countryService";
 import { projectService } from "@/services/api/projectService";
 import { indicatorService } from "@/services/api/indicatorService";
@@ -32,7 +33,7 @@ const DataEntry = () => {
   const [selectedCountry, setSelectedCountry] = useState("");
   const [selectedProject, setSelectedProject] = useState("");
   const [selectedPeriod, setSelectedPeriod] = useState("2024-Q1");
-  const [dataEntries, setDataEntries] = useState([]);
+const [dataEntries, setDataEntries] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   
   // Enhanced features
@@ -41,6 +42,9 @@ const DataEntry = () => {
   const [lastSavedTime, setLastSavedTime] = useState(null);
   const [isDraftSaving, setIsDraftSaving] = useState(false);
   
+  // Submission tracking states
+  const [submissionStatuses, setSubmissionStatuses] = useState({});
+  const [approvalWorkflow, setApprovalWorkflow] = useState({});
   // Refs for auto-save
   const autoSaveTimerRef = useRef(null);
   const isInitialLoadRef = useRef(true);
@@ -144,25 +148,88 @@ const DataEntry = () => {
         baseline: indicator.baseline,
         target: indicator.target,
         isRequired: indicator.isRequired || false,
-        validationRules: indicator.validationRules || {}
+        validationRules: indicator.validationRules || {},
+        submissionStatus: submissionStatuses[indicator.Id] || "draft",
+        approvalStage: approvalWorkflow[indicator.Id] || null,
+        submittedAt: null,
+        reviewedAt: null,
+        feedback: null
       }));
       
       setDataEntries(entries);
       setValidationErrors({});
       
+      // Load submission statuses for existing data points
+      loadSubmissionStatuses(userAssignedIndicators.map(i => i.Id));
+      
       // Update progress tracking
       const completedEntries = entries.filter(entry => entry.value && entry.value !== "");
+      const approvedEntries = entries.filter(entry => submissionStatuses[entry.indicatorId] === "approved");
+      const pendingReview = entries.filter(entry => submissionStatuses[entry.indicatorId] === "submitted" || submissionStatuses[entry.indicatorId] === "in_review");
+      
       dispatch(setDataEntryProgress({ 
         completed: completedEntries.length, 
         total: entries.length,
-        assignedToUser: userAssignedIndicators
+        assignedToUser: userAssignedIndicators,
+        approved: approvedEntries.length,
+        pendingReview: pendingReview.length,
+        submissionWorkflow: {
+          draft: entries.filter(e => !submissionStatuses[e.indicatorId] || submissionStatuses[e.indicatorId] === "draft").length,
+          submitted: entries.filter(e => submissionStatuses[e.indicatorId] === "submitted").length,
+          inReview: entries.filter(e => submissionStatuses[e.indicatorId] === "in_review").length,
+          approved: approvedEntries.length,
+          rejected: entries.filter(e => submissionStatuses[e.indicatorId] === "rejected").length
+        }
       }));
       
     } else {
       setDataEntries([]);
       setValidationErrors({});
+      setSubmissionStatuses({});
+      setApprovalWorkflow({});
     }
-  }, [selectedProject, indicators, currentUser.role, dataEntry.draft, dispatch]);
+  }, [selectedProject, indicators, currentUser.role, dataEntry.draft, submissionStatuses, approvalWorkflow, dispatch]);
+
+  // Load submission statuses for indicators
+  const loadSubmissionStatuses = async (indicatorIds) => {
+    try {
+      const statusPromises = indicatorIds.map(async (indicatorId) => {
+        const dataPoints = await dataPointService.getAll();
+        const existingPoint = dataPoints.find(dp => 
+          dp.indicatorId === indicatorId && 
+          dp.projectId === selectedProject?.Id &&
+          dp.countryId === selectedCountry?.Id
+        );
+        return {
+          indicatorId,
+          status: existingPoint?.status || "draft",
+          workflow: existingPoint?.approvalWorkflow || null,
+          submittedAt: existingPoint?.submittedAt || null,
+          reviewedAt: existingPoint?.reviewedAt || null,
+          feedback: existingPoint?.feedback || null
+        };
+      });
+
+      const statuses = await Promise.all(statusPromises);
+      const statusMap = {};
+      const workflowMap = {};
+
+      statuses.forEach(({ indicatorId, status, workflow, submittedAt, reviewedAt, feedback }) => {
+        statusMap[indicatorId] = status;
+        workflowMap[indicatorId] = {
+          stage: workflow,
+          submittedAt,
+          reviewedAt,
+          feedback
+        };
+      });
+
+      setSubmissionStatuses(statusMap);
+      setApprovalWorkflow(workflowMap);
+    } catch (error) {
+      console.error("Error loading submission statuses:", error);
+    }
+  };
 
 // Auto-save functionality
   const saveDraft = useCallback(async () => {
@@ -344,25 +411,54 @@ const handleSubmit = async (e) => {
 
       await Promise.all(promises);
       
-      toast.success(
-        `Successfully submitted ${validEntries.length} data points for review. ` +
-        `${dataEntries.length - validEntries.length} indicators remain incomplete.`
+toast.success(
+        `Successfully submitted ${validEntries.length} data points for approval workflow. ` +
+        `${dataEntries.length - validEntries.length} indicators remain incomplete. Track progress in the Status column.`
+      );
+      
+      // Update submission statuses
+      const newSubmissionStatuses = { ...submissionStatuses };
+      const newApprovalWorkflow = { ...approvalWorkflow };
+      
+      validEntries.forEach(entry => {
+        newSubmissionStatuses[entry.indicatorId] = "submitted";
+        newApprovalWorkflow[entry.indicatorId] = {
+          stage: "pending_review",
+          submittedAt: new Date().toISOString(),
+          reviewedAt: null,
+          feedback: null
+        };
+      });
+      
+      setSubmissionStatuses(newSubmissionStatuses);
+      setApprovalWorkflow(newApprovalWorkflow);
+      
+      // Create notification for submission tracking
+      toast.info(
+        `Your submission is now in the approval workflow. You'll receive notifications about review status and feedback.`,
+        { autoClose: 5000 }
       );
       
       // Update progress and clear draft
       dispatch(setDataEntryProgress({ 
         completed: dataEntries.length, 
-        total: dataEntries.length 
+        total: dataEntries.length,
+        submitted: validEntries.length,
+        pendingReview: validEntries.length
       }));
       dispatch(setDataEntryDraft({}));
       dispatch(setDataEntryAutoSave({ lastSaved: null, isDirty: false }));
       
-      // Reset form
-      setDataEntries(prev => prev.map(entry => ({ ...entry, value: "" })));
+      // Reset form values but keep submission tracking
+      setDataEntries(prev => prev.map(entry => ({ 
+        ...entry, 
+        value: "",
+        submissionStatus: newSubmissionStatuses[entry.indicatorId] || "draft",
+        approvalStage: newApprovalWorkflow[entry.indicatorId] || null
+      })));
       setValidationErrors({});
       setHasUnsavedChanges(false);
       setLastSavedTime(null);
-      
     } catch (err) {
       console.error("Submission error:", err);
       toast.error("Failed to submit data. Please try again.");
@@ -596,29 +692,48 @@ const handleSubmit = async (e) => {
                     <th className="text-center py-4 px-4 font-semibold text-gray-900">
                       Progress
                     </th>
-                    <th className="text-center py-4 px-4 font-semibold text-gray-900">
-                      Status
+<th className="text-center py-4 px-4 font-semibold text-gray-900">
+                      Status & Workflow
                     </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {dataEntries.map((entry, index) => {
+{dataEntries.map((entry, index) => {
                     const progress = entry.value && entry.target ? 
                       Math.round((parseFloat(entry.value) / entry.target) * 100) : 0;
                     const hasError = validationErrors[entry.indicatorId];
                     const isCompleted = entry.value && entry.value !== "" && !hasError;
+                    const submissionStatus = submissionStatuses[entry.indicatorId] || "draft";
+                    const workflowData = approvalWorkflow[entry.indicatorId];
+                    
+                    // Determine row styling based on submission status
+                    const getRowClass = () => {
+                      if (hasError) return 'bg-red-50';
+                      if (submissionStatus === "approved") return 'bg-green-50';
+                      if (submissionStatus === "rejected") return 'bg-red-50';
+                      if (submissionStatus === "in_review") return 'bg-blue-50';
+                      if (submissionStatus === "submitted") return 'bg-yellow-50';
+                      if (isCompleted) return 'bg-green-50';
+                      return '';
+                    };
                     
                     return (
                       <tr 
                         key={entry.indicatorId} 
-                        className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${
-                          hasError ? 'bg-red-50' : isCompleted ? 'bg-green-50' : ''
-                        }`}
+                        className={`border-b border-gray-100 hover:bg-gray-50 transition-colors ${getRowClass()}`}
                       >
                         <td className="py-4 px-4">
                           <div className="flex items-start space-x-3">
                             <div className="mt-1">
-                              {isCompleted ? (
+                              {submissionStatus === "approved" ? (
+                                <ApperIcon name="CheckCircle2" size={16} className="text-success" />
+                              ) : submissionStatus === "rejected" ? (
+                                <ApperIcon name="XCircle" size={16} className="text-error" />
+                              ) : submissionStatus === "in_review" ? (
+                                <ApperIcon name="Clock" size={16} className="text-info" />
+                              ) : submissionStatus === "submitted" ? (
+                                <ApperIcon name="Send" size={16} className="text-warning" />
+                              ) : isCompleted ? (
                                 <ApperIcon name="CheckCircle" size={16} className="text-success" />
                               ) : hasError ? (
                                 <ApperIcon name="XCircle" size={16} className="text-error" />
@@ -634,6 +749,12 @@ const handleSubmit = async (e) => {
                               <div className="text-sm text-gray-600">
                                 Unit: {entry.indicatorUnit} • Type: {entry.indicatorType}
                               </div>
+                              {workflowData?.feedback && (
+                                <div className="text-sm text-blue-600 mt-1">
+                                  <ApperIcon name="MessageSquare" size={12} className="inline mr-1" />
+                                  Feedback available
+                                </div>
+                              )}
                             </div>
                           </div>
                         </td>
@@ -653,9 +774,15 @@ const handleSubmit = async (e) => {
                               className={`text-center ${hasError ? 'border-error' : ''}`}
                               min="0"
                               step={entry.indicatorType === "currency" ? "0.01" : "1"}
+                              disabled={submissionStatus === "submitted" || submissionStatus === "in_review"}
                             />
                             {hasError && (
                               <div className="text-xs text-error">{hasError}</div>
+                            )}
+                            {workflowData?.feedback && (
+                              <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded mt-1">
+                                <strong>Feedback:</strong> {workflowData.feedback}
+                              </div>
                             )}
                           </div>
                         </td>
@@ -674,17 +801,39 @@ const handleSubmit = async (e) => {
                           )}
                         </td>
                         <td className="text-center py-4 px-4">
-                          {isCompleted ? (
-                            <div className="flex items-center justify-center text-success">
-                              <ApperIcon name="Check" size={16} />
+                          <div className="space-y-1">
+                            {/* Submission Status Badge */}
+                            <div className={`px-2 py-1 rounded-full text-xs font-medium inline-flex items-center gap-1 ${
+                              submissionStatus === "approved" ? "bg-success text-white" :
+                              submissionStatus === "rejected" ? "bg-error text-white" :
+                              submissionStatus === "in_review" ? "bg-info text-white" :
+                              submissionStatus === "submitted" ? "bg-warning text-white" :
+                              isCompleted ? "bg-gray-200 text-gray-700" :
+                              hasError ? "bg-error text-white" :
+                              "bg-gray-100 text-gray-500"
+                            }`}>
+                              {submissionStatus === "approved" && <ApperIcon name="Check" size={12} />}
+                              {submissionStatus === "rejected" && <ApperIcon name="X" size={12} />}
+                              {submissionStatus === "in_review" && <ApperIcon name="Eye" size={12} />}
+                              {submissionStatus === "submitted" && <ApperIcon name="Send" size={12} />}
+                              {submissionStatus === "approved" ? "Approved" :
+                               submissionStatus === "rejected" ? "Rejected" :
+                               submissionStatus === "in_review" ? "In Review" :
+                               submissionStatus === "submitted" ? "Submitted" :
+                               isCompleted ? "Ready" :
+                               hasError ? "Error" :
+                               "Draft"}
                             </div>
-                          ) : hasError ? (
-                            <div className="flex items-center justify-center text-error">
-                              <ApperIcon name="X" size={16} />
-                            </div>
-                          ) : (
-                            <div className="text-gray-400 text-sm">Pending</div>
-                          )}
+                            
+                            {/* Workflow Timing */}
+                            {workflowData?.submittedAt && (
+                              <div className="text-xs text-gray-500">
+                                {submissionStatus === "approved" || submissionStatus === "rejected" ? "Reviewed" : "Submitted"}: {
+                                  format(parseISO(workflowData.reviewedAt || workflowData.submittedAt), 'MMM d')
+                                }
+                              </div>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );

@@ -39,7 +39,56 @@ export const dataPointService = {
     const projectIds = countryProjects.map(p => p.Id);
     return dataPointsData.filter(dp => projectIds.includes(dp.projectId)).map(dp => ({ ...dp }));
   },
+// Approval workflow methods
+  async approve(id, approverName = "System") {
+    await delay(300);
+    return this.update(id, {
+      status: "approved",
+      approvedBy: approverName,
+      approvedAt: new Date().toISOString(),
+      approvalWorkflow: "approved"
+    });
+  },
 
+  async reject(id, reason = "", rejectorName = "System") {
+    await delay(300);
+    return this.update(id, {
+      status: "rejected",
+      rejectedBy: rejectorName,
+      rejectedAt: new Date().toISOString(),
+      rejectionReason: reason,
+      approvalWorkflow: "rejected",
+      feedback: reason
+    });
+  },
+
+// Get submissions pending review
+  async getPendingReview() {
+    await delay(200);
+    return dataPointsData.filter(item => 
+      item.status === "submitted" || item.status === "in_review"
+    ).map(item => ({ ...item }));
+  },
+
+  // Update submission status (for workflow management)
+  async updateSubmissionStatus(id, status, additionalData = {}) {
+    await delay(200);
+    const index = dataPointsData.findIndex(item => item.Id === id);
+    if (index === -1) {
+      throw new Error(`DataPoint with ID ${id} not found`);
+    }
+
+    const updatedData = {
+      ...dataPointsData[index],
+      status,
+      approvalWorkflow: status,
+      ...additionalData,
+      updatedAt: new Date().toISOString()
+    };
+
+    dataPointsData[index] = updatedData;
+    return { ...updatedData };
+  },
 async create(dataPointData) {
     await delay(400);
     const newId = Math.max(...dataPointsData.map(dp => dp.Id), 0) + 1;
@@ -83,18 +132,8 @@ async create(dataPointData) {
     dataPointsData[index] = { ...dataPointsData[index], ...updateData };
     return { ...dataPointsData[index] };
   },
-
-  async approve(id, approverName) {
+async delete(id) {
     await delay(300);
-    return this.update(id, {
-      status: "approved",
-      approvedBy: approverName,
-      approvedAt: new Date().toISOString()
-    });
-  },
-
-  async delete(id) {
-await delay(300);
     const index = dataPointsData.findIndex(dp => dp.Id === parseInt(id));
     if (index === -1) {
       throw new Error(`DataPoint with Id ${id} not found`);
