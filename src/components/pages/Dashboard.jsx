@@ -62,9 +62,9 @@ const Dashboard = () => {
             </div>
           </div>
           <div className="hidden md:flex items-center space-x-4">
-            <div className="bg-white/10 backdrop-blur rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold">10</div>
-              <div className="text-xs text-primary-200">Countries</div>
+<div className="bg-white/10 backdrop-blur rounded-lg p-4 text-center">
+              <div className="text-2xl font-bold">{selectedCountry ? 1 : '10'}</div>
+              <div className="text-xs text-primary-200">Active Countries</div>
             </div>
             <div className="bg-white/10 backdrop-blur rounded-lg p-4 text-center">
               <div className="text-2xl font-bold">25</div>

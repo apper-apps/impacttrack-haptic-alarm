@@ -59,7 +59,7 @@ export const useDashboardData = (selectedCountry = null) => {
 
   // Calculate key metrics
 // Enhanced metrics calculation with comprehensive chart result analysis
-  const calculateMetrics = () => {
+const calculateMetrics = () => {
     const { countries, projects, dataPoints, indicators } = data;
 
     // Core data aggregation for chart results
@@ -88,9 +88,20 @@ export const useDashboardData = (selectedCountry = null) => {
     );
     const totalLoansValue = loansPoints.reduce((sum, dp) => sum + dp.value, 0);
 
-    // Geographic coverage for regional performance charts
+    // Geographic coverage for regional performance charts - dynamically calculate from data
     const activeCountries = selectedCountry ? 1 : countries.filter(c => c.status === "active").length;
     const activeProjects = projects.filter(p => p.status === "active").length;
+
+    // Calculate countries with actual performance data
+    const countriesWithData = new Set();
+    dataPoints.forEach(dp => {
+      if (dp.indicatorId === 1 && dp.status === "approved" && dp.period === "2024-Q1") {
+        const project = projects.find(p => p.Id === dp.projectId);
+        if (project) {
+          countriesWithData.add(project.countryId);
+        }
+      }
+    });
 
     // Training delivery metrics
     const trainingSessionsPoints = dataPoints.filter(dp => 

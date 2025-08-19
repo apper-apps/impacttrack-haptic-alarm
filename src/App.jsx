@@ -9,6 +9,8 @@ import Settings from "@/components/pages/Settings";
 import Analytics from "@/components/pages/Analytics";
 import Reports from "@/components/pages/Reports";
 import NotificationCenter from "@/components/pages/NotificationCenter";
+import Countries from "@/components/pages/Countries";
+import CountryDetail from "@/components/pages/CountryDetail";
 import Layout from "@/components/organisms/Layout";
 
 const App = () => {
@@ -16,12 +18,14 @@ const App = () => {
     <BrowserRouter>
       <div className="min-h-screen bg-background">
 <Routes>
-          <Route path="/" element={<Layout />}>
+<Route path="/" element={<Layout />}>
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="data-entry" element={<DataEntry />} />
             <Route path="bulk-import" element={<BulkImport />} />
             <Route path="projects" element={<Projects />} />
+            <Route path="countries" element={<Countries />} />
+            <Route path="countries/:id" element={<CountryDetail />} />
             <Route path="reports" element={<Reports />} />
             <Route path="analytics" element={<Analytics />} />
             <Route path="notifications" element={<NotificationCenter />} />
