@@ -18,11 +18,11 @@ const Sidebar = () => {
       icon: "LayoutDashboard",
       description: "Overview and KPIs"
     },
-    {
-      name: "Data Entry",
+{
+      name: "Submit Data",
       href: "/data-entry",
       icon: "PlusCircle",
-      description: "Add new data points"
+      description: "Submit performance data"
     },
     {
       name: "Projects",

@@ -18,10 +18,27 @@ const initialState = {
     error: null,
     unreadCount: 0
   },
-  bulkImport: {
+bulkImport: {
     loading: false,
     progress: 0,
     error: null
+  },
+  dataEntry: {
+    progress: {
+      completed: 0,
+      total: 0,
+      assignedToUser: []
+    },
+    autoSave: {
+      lastSaved: null,
+      isDirty: false,
+      interval: 30000 // 30 seconds
+    },
+    validation: {
+      errors: {},
+      isValid: true
+    },
+    draft: {}
   }
 };
 
@@ -78,11 +95,31 @@ reducers: {
       state.bulkImport.error = action.payload;
       state.bulkImport.loading = false;
     },
-    clearBulkImportState: (state) => {
+clearBulkImportState: (state) => {
       state.bulkImport = {
         loading: false,
         progress: 0,
         error: null
+      };
+    },
+    setDataEntryProgress: (state, action) => {
+      state.dataEntry.progress = { ...state.dataEntry.progress, ...action.payload };
+    },
+    setDataEntryAutoSave: (state, action) => {
+      state.dataEntry.autoSave = { ...state.dataEntry.autoSave, ...action.payload };
+    },
+    setDataEntryValidation: (state, action) => {
+      state.dataEntry.validation = { ...state.dataEntry.validation, ...action.payload };
+    },
+    setDataEntryDraft: (state, action) => {
+      state.dataEntry.draft = action.payload;
+    },
+    clearDataEntryState: (state) => {
+      state.dataEntry = {
+        progress: { completed: 0, total: 0, assignedToUser: [] },
+        autoSave: { lastSaved: null, isDirty: false, interval: 30000 },
+        validation: { errors: {}, isValid: true },
+        draft: {}
       };
     }
   },
@@ -101,6 +138,11 @@ export const {
   setBulkImportLoading,
   setBulkImportProgress,
   setBulkImportError,
-  clearBulkImportState
+  clearBulkImportState,
+  setDataEntryProgress,
+  setDataEntryAutoSave,
+  setDataEntryValidation,
+  setDataEntryDraft,
+  clearDataEntryState
 } = melSlice.actions;
 export default melSlice.reducer;
