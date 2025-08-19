@@ -1,17 +1,22 @@
-import React, { useState, useEffect } from "react";
-import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
+import React, { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { DragDropContext, Draggable, Droppable } from "react-beautiful-dnd";
 import { toast } from "react-toastify";
-import Card from "@/components/atoms/Card";
-import Button from "@/components/atoms/Button";
-import Select from "@/components/atoms/Select";
-import Input from "@/components/atoms/Input";
-import ApperIcon from "@/components/ApperIcon";
-import Loading from "@/components/ui/Loading";
 import { countryService } from "@/services/api/countryService";
 import { projectService } from "@/services/api/projectService";
 import { indicatorService } from "@/services/api/indicatorService";
+import ApperIcon from "@/components/ApperIcon";
+import Loading from "@/components/ui/Loading";
+import Input from "@/components/atoms/Input";
+import Button from "@/components/atoms/Button";
+import Card from "@/components/atoms/Card";
+import Select from "@/components/atoms/Select";
+import { addReportToHistory, setReportQueue, updateReportProgress } from "@/store/melSlice";
 const Reports = () => {
-const [countries, setCountries] = useState([]);
+const dispatch = useDispatch();
+  const { reports } = useSelector(state => state.mel);
+  
+  const [countries, setCountries] = useState([]);
   const [projects, setProjects] = useState([]);
   const [indicators, setIndicators] = useState([]);
   const [selectedIndicators, setSelectedIndicators] = useState([]);
@@ -19,6 +24,7 @@ const [countries, setCountries] = useState([]);
   const [generating, setGenerating] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [activeTab, setActiveTab] = useState("templates");
 
   // Report filters
   const [filters, setFilters] = useState({
@@ -55,51 +61,53 @@ const reportTypes = [
   const reportTemplates = [
     {
       id: 1,
-      name: "Board Quarterly Report",
+      name: "Board Report",
       description: "Executive summary with key metrics and highlights",
       icon: "PieChart",
       color: "from-primary to-secondary",
-      lastGenerated: "2024-03-28"
+      lastGenerated: "2024-03-28",
+      indicatorCount: 8,
+      estimatedTime: "3 min"
     },
     {
       id: 2,
-      name: "Donor Impact Report",
-      description: "Detailed impact metrics for donor stakeholders",
+      name: "Quarterly Impact",
+      description: "Comprehensive quarterly performance analysis",
       icon: "TrendingUp",
       color: "from-success to-green-600",
-      lastGenerated: "2024-03-15"
+      lastGenerated: "2024-03-15",
+      indicatorCount: 12,
+      estimatedTime: "5 min"
     },
     {
       id: 3,
-      name: "Country Performance",
-      description: "Country-specific performance and progress analysis",
-      icon: "Globe",
+      name: "Annual Summary",
+      description: "Year-end performance and achievements report",
+      icon: "Calendar",
       color: "from-info to-blue-600",
-      lastGenerated: "2024-03-20"
+      lastGenerated: "2024-03-20",
+      indicatorCount: 15,
+      estimatedTime: "7 min"
     },
     {
       id: 4,
-      name: "Gender Analysis Report",
-      description: "Female participation and empowerment metrics",
+      name: "Donor Report",
+      description: "Detailed impact metrics for donor stakeholders",
       icon: "Heart",
       color: "from-pink-500 to-rose-500",
-      lastGenerated: "2024-03-10"
+      lastGenerated: "2024-03-10",
+      indicatorCount: 10,
+      estimatedTime: "4 min"
     },
     {
       id: 5,
-      name: "Financial Summary",
-      description: "Loan disbursements, repayments, and financial health",
-      icon: "DollarSign",
+      name: "Country Performance",
+      description: "Country-specific performance and progress analysis",
+      icon: "Globe",
       color: "from-accent to-yellow-600",
-      lastGenerated: "2024-03-25"
-    },
-    {
-      id: 6,
-      name: "Training & Capacity Building",
-      description: "Training sessions, participants, and outcomes",
-      icon: "GraduationCap",
-      color: "from-purple-500 to-indigo-600",
-      lastGenerated: "2024-03-18"
+      lastGenerated: "2024-03-25",
+      indicatorCount: 9,
+      estimatedTime: "4 min"
     }
   ];
 
@@ -140,6 +148,16 @@ const handleFilterChange = (field, value) => {
     }));
   };
 
+  const handlePreviewReport = () => {
+    if (activeTab === "custom" && selectedIndicators.length === 0) {
+      toast.warning("Please add indicators to preview the report");
+      return;
+    }
+    
+    toast.info("Opening report preview...");
+    // In real implementation, this would open a preview modal/page
+  };
+
   const handleDragEnd = (result) => {
     if (!result.destination) return;
 
@@ -177,7 +195,7 @@ const handleFilterChange = (field, value) => {
   };
 
 const handleGenerateReport = async () => {
-    if (filters.reportType === "custom" && selectedIndicators.length === 0) {
+    if (activeTab === "custom" && selectedIndicators.length === 0) {
       toast.warning("Please add indicators to your custom report");
       return;
     }
@@ -185,12 +203,45 @@ const handleGenerateReport = async () => {
     setGenerating(true);
     
     try {
-      // Simulate report generation
-      await new Promise(resolve => setTimeout(resolve, 2500));
+      // Create report queue entry
+      const reportId = Date.now().toString();
+      const reportName = filters.reportTitle || "Custom Report";
       
-      const reportName = filters.reportTitle || reportTypes.find(rt => rt.value === filters.reportType)?.label || "Report";
-      const indicatorCount = filters.reportType === "custom" ? selectedIndicators.length : "all";
-      toast.success(`${reportName} generated successfully with ${indicatorCount} indicators!`);
+      dispatch(setReportQueue({
+        id: reportId,
+        name: reportName,
+        status: "generating",
+        progress: 0,
+        format: filters.format,
+        createdAt: new Date().toISOString()
+      }));
+
+      toast.success("Report added to generation queue");
+      
+      // Simulate report generation with progress updates
+      for (let progress = 20; progress <= 100; progress += 20) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+        dispatch(updateReportProgress({ id: reportId, progress }));
+      }
+      
+      // Complete the report
+      dispatch(updateReportProgress({ 
+        id: reportId, 
+        status: "completed",
+        downloadUrl: `/reports/${reportId}.${filters.format}`
+      }));
+      
+      dispatch(addReportToHistory({
+        id: reportId,
+        name: reportName,
+        type: activeTab === "custom" ? "Custom" : "Template",
+        generated: new Date().toISOString().split('T')[0],
+        size: "2.1 MB",
+        format: filters.format.toUpperCase(),
+        indicatorCount: selectedIndicators.length
+      }));
+      
+      toast.success(`${reportName} generated and ready for download!`);
       
     } catch (err) {
       console.error("Report generation error:", err);
@@ -212,12 +263,46 @@ const handleGenerateReport = async () => {
   const categories = ["all", ...new Set(indicators.map(ind => ind.category))];
 
   const handleTemplateGenerate = async (template) => {
-    setGenerating(true);
+setGenerating(true);
     
     try {
-      // Simulate report generation
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      toast.success(`${template.name} generated successfully!`);
+      // Create report queue entry for template
+      const reportId = Date.now().toString();
+      
+      dispatch(setReportQueue({
+        id: reportId,
+        name: template.name,
+        status: "generating",
+        progress: 0,
+        format: filters.format,
+        createdAt: new Date().toISOString()
+      }));
+
+      toast.success(`${template.name} added to generation queue`);
+      
+      // Simulate faster template generation
+      for (let progress = 25; progress <= 100; progress += 25) {
+        await new Promise(resolve => setTimeout(resolve, 300));
+        dispatch(updateReportProgress({ id: reportId, progress }));
+      }
+      
+      dispatch(updateReportProgress({ 
+        id: reportId, 
+        status: "completed",
+        downloadUrl: `/reports/templates/${reportId}.${filters.format}`
+      }));
+      
+      dispatch(addReportToHistory({
+        id: reportId,
+        name: template.name,
+        type: "Template",
+        generated: new Date().toISOString().split('T')[0],
+        size: "1.8 MB",
+        format: filters.format.toUpperCase(),
+        indicatorCount: template.indicatorCount
+      }));
+      
+      toast.success(`${template.name} generated and ready for download!`);
       
     } catch (err) {
       console.error("Template generation error:", err);
@@ -234,362 +319,563 @@ const handleGenerateReport = async () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+<div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Reports</h1>
           <p className="text-gray-600 mt-1">Generate and export program performance reports</p>
         </div>
-        <Button variant="outline">
-          <ApperIcon name="History" size={16} className="mr-2" />
-          Report History
-        </Button>
-      </div>
-
-      {/* Quick Templates */}
-      <div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Report Templates</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {reportTemplates.map((template) => (
-            <Card key={template.id} hover className="group">
-              <div className="flex items-start justify-between mb-4">
-                <div className={`w-12 h-12 rounded-xl bg-gradient-to-r ${template.color} flex items-center justify-center group-hover:scale-110 transition-transform duration-200`}>
-                  <ApperIcon name={template.icon} size={24} className="text-white" />
-                </div>
-                <div className="text-xs text-gray-500">
-                  Last: {template.lastGenerated}
-                </div>
-              </div>
-              
-              <h3 className="font-semibold text-gray-900 mb-2">{template.name}</h3>
-              <p className="text-sm text-gray-600 mb-4">{template.description}</p>
-              
-              <Button
-                size="sm"
-                className="w-full"
-                onClick={() => handleTemplateGenerate(template)}
-                disabled={generating}
-              >
-                <ApperIcon name="FileText" size={14} className="mr-2" />
-                Generate Report
-              </Button>
-            </Card>
-          ))}
+        <div className="flex space-x-3">
+          {reports?.queue?.length > 0 && (
+            <Button variant="outline">
+              <ApperIcon name="Clock" size={16} className="mr-2" />
+              Export Queue ({reports.queue.filter(r => r.status === "generating").length})
+            </Button>
+          )}
+          <Button variant="outline" onClick={() => setActiveTab("history")}>
+            <ApperIcon name="History" size={16} className="mr-2" />
+            Report History
+          </Button>
         </div>
       </div>
 
-{/* Drag & Drop Report Designer */}
-      <div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Drag & Drop Report Designer</h2>
-        
-        <DragDropContext onDragEnd={handleDragEnd}>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-            
-            {/* Indicator Library */}
-            <Card className="lg:col-span-1">
-              <div className="p-4 border-b border-gray-200">
-                <h3 className="font-medium text-gray-900 mb-3">Indicator Library</h3>
-                
-                <div className="space-y-3">
-                  <Input
-                    placeholder="Search indicators..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                  
-                  <Select
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    options={categories.map(cat => ({ 
-                      value: cat, 
-                      label: cat === "all" ? "All Categories" : cat 
-                    }))}
-                  />
-                </div>
-              </div>
-              
-              <Droppable droppableId="indicators">
-                {(provided, snapshot) => (
-                  <div
-                    {...provided.droppableProps}
-                    ref={provided.innerRef}
-                    className={`max-h-96 overflow-y-auto p-4 space-y-2 ${
-                      snapshot.isDraggingOver ? 'bg-blue-50' : ''
-                    }`}
-                  >
-                    {filteredIndicators.map((indicator, index) => (
-                      <Draggable
-                        key={indicator.Id}
-                        draggableId={`indicator-${indicator.Id}`}
-                        index={index}
-                      >
-                        {(provided, snapshot) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                            className={`p-3 bg-white border border-gray-200 rounded-lg cursor-grab hover:shadow-md transition-shadow ${
-                              snapshot.isDragging ? 'rotate-2 shadow-lg' : ''
-                            } ${
-                              selectedIndicators.find(ind => ind.Id === indicator.Id) ? 'opacity-50' : ''
-                            }`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <div className="flex-1">
-                                <h4 className="text-sm font-medium text-gray-900 truncate">
-                                  {indicator.name}
-                                </h4>
-                                <p className="text-xs text-gray-500 mt-1">
-                                  {indicator.category} • {indicator.unit}
-                                </p>
-                              </div>
-                              <ApperIcon name="GripVertical" size={16} className="text-gray-400 ml-2" />
-                            </div>
-                          </div>
-                        )}
-                      </Draggable>
-                    ))}
-                    {provided.placeholder}
-                    
-                    {filteredIndicators.length === 0 && (
-                      <div className="text-center py-8 text-gray-500">
-                        <ApperIcon name="Search" size={24} className="mx-auto mb-2 opacity-50" />
-                        <p className="text-sm">No indicators found</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </Droppable>
-            </Card>
+      {/* Tab Navigation */}
+      <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg mb-6 w-fit">
+        <button
+          onClick={() => setActiveTab("templates")}
+          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            activeTab === "templates"
+              ? "bg-white text-primary shadow-sm"
+              : "text-gray-600 hover:text-gray-900"
+          }`}
+        >
+          <ApperIcon name="Layout" size={16} className="mr-2 inline" />
+          Template Library
+        </button>
+        <button
+          onClick={() => setActiveTab("custom")}
+          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            activeTab === "custom"
+              ? "bg-white text-primary shadow-sm"
+              : "text-gray-600 hover:text-gray-900"
+          }`}
+        >
+          <ApperIcon name="Wrench" size={16} className="mr-2 inline" />
+          Custom Builder
+        </button>
+        <button
+          onClick={() => setActiveTab("history")}
+          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            activeTab === "history"
+              ? "bg-white text-primary shadow-sm"
+              : "text-gray-600 hover:text-gray-900"
+          }`}
+        >
+          <ApperIcon name="Archive" size={16} className="mr-2 inline" />
+          Report History
+        </button>
+      </div>
 
-            {/* Report Canvas */}
-            <Card className="lg:col-span-2">
-              <div className="p-4 border-b border-gray-200">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-medium text-gray-900">Report Design Canvas</h3>
-                  <div className="text-sm text-gray-500">
-                    {selectedIndicators.length} indicators selected
+      {/* Template Library */}
+      {activeTab === "templates" && (
+        <div>
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Report Templates</h2>
+            <p className="text-gray-600">Pre-built reports with standard indicator sets and formatting</p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            {reportTemplates.map((template) => (
+              <Card key={template.id} className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer group">
+                <div className={`h-32 bg-gradient-to-br ${template.color} p-4 text-white relative`}>
+                  <div className="flex items-center justify-between h-full">
+                    <div>
+                      <h3 className="text-lg font-semibold mb-2">{template.name}</h3>
+                      <div className="flex items-center space-x-4 text-sm opacity-90">
+                        <span>{template.indicatorCount} indicators</span>
+                        <span>~{template.estimatedTime}</span>
+                      </div>
+                    </div>
+                    <ApperIcon name={template.icon} size={32} className="opacity-80" />
                   </div>
                 </div>
-              </div>
-              
-              <Droppable droppableId="selectedIndicators">
-                {(provided, snapshot) => (
-                  <div
-                    {...provided.droppableProps}
-                    ref={provided.innerRef}
-                    className={`min-h-96 p-4 ${
-                      snapshot.isDraggingOver ? 'bg-green-50' : selectedIndicators.length === 0 ? 'bg-gray-50' : ''
-                    }`}
+                
+                <div className="p-4">
+                  <p className="text-gray-600 text-sm mb-4">{template.description}</p>
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs text-gray-500">
+                      Last: {template.lastGenerated}
+                    </div>
+                    <Button 
+                      size="sm"
+                      onClick={() => handleTemplateGenerate(template)}
+                      loading={generating}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <ApperIcon name="Download" size={14} className="mr-1" />
+                      Generate
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+
+          {/* Quick Generate Section */}
+          <Card>
+            <div className="p-4 border-b border-gray-200">
+              <h3 className="font-medium text-gray-900">Quick Generate Options</h3>
+            </div>
+            <div className="p-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                <Select
+                  label="Country"
+                  value={filters.country}
+                  onChange={(e) => handleFilterChange("country", e.target.value)}
+                  options={[
+                    { value: "", label: "All Countries" },
+                    ...countries.map(c => ({ value: c.Id.toString(), label: c.name }))
+                  ]}
+                />
+                <Select
+                  label="Period"
+                  value={filters.period}
+                  onChange={(e) => handleFilterChange("period", e.target.value)}
+                  options={periods}
+                />
+                <Select
+                  label="Format"
+                  value={filters.format}
+                  onChange={(e) => handleFilterChange("format", e.target.value)}
+                  options={formats}
+                />
+                <div className="flex items-end">
+                  <Button 
+                    variant="outline" 
+                    className="w-full"
+                    onClick={handlePreviewReport}
                   >
-                    {selectedIndicators.length === 0 && (
-                      <div className="flex flex-col items-center justify-center h-80 text-gray-400 border-2 border-dashed border-gray-300 rounded-lg">
-                        <ApperIcon name="Plus" size={32} className="mb-3" />
-                        <p className="text-lg font-medium">Drop indicators here</p>
-                        <p className="text-sm">Drag indicators from the library to build your report</p>
-                      </div>
-                    )}
+                    <ApperIcon name="Eye" size={16} className="mr-2" />
+                    Preview
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
+{/* Custom Report Builder */}
+      {activeTab === "custom" && (
+        <>
+          {/* Quick Templates */}
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Report Templates</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {reportTemplates.map((template) => (
+                <Card key={template.id} hover className="group">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-r ${template.color} flex items-center justify-center group-hover:scale-110 transition-transform duration-200`}>
+                      <ApperIcon name={template.icon} size={24} className="text-white" />
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Last: {template.lastGenerated}
+                    </div>
+                  </div>
+                  
+                  <h3 className="font-semibold text-gray-900 mb-2">{template.name}</h3>
+                  <p className="text-sm text-gray-600 mb-4">{template.description}</p>
+                  
+                  <Button
+                    size="sm"
+                    className="w-full"
+                    onClick={() => handleTemplateGenerate(template)}
+                    disabled={generating}
+                  >
+                    <ApperIcon name="FileText" size={14} className="mr-2" />
+                    Generate Report
+                  </Button>
+                </Card>
+              ))}
+            </div>
+          </div>
+
+          {/* Drag & Drop Report Designer */}
+<div>
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Custom Report Builder</h2>
+            <p className="text-gray-600">Drag and drop indicators to create your personalized report</p>
+          </div>
+          
+          <DragDropContext onDragEnd={handleDragEnd}>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+              
+              {/* Indicator Library */}
+              <Card className="lg:col-span-1">
+                <div className="p-4 border-b border-gray-200">
+                  <h3 className="font-medium text-gray-900 mb-3">Indicator Library</h3>
+                  
+                  <div className="space-y-3">
+                    <Input
+                      placeholder="Search indicators..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {selectedIndicators.map((indicator, index) => (
+                    <Select
+                      value={selectedCategory}
+                      onChange={(e) => setSelectedCategory(e.target.value)}
+                      options={categories.map(cat => ({ 
+                        value: cat, 
+                        label: cat === "all" ? "All Categories" : cat 
+                      }))}
+                    />
+                  </div>
+                </div>
+                
+                <Droppable droppableId="indicators">
+                  {(provided, snapshot) => (
+                    <div
+                      {...provided.droppableProps}
+                      ref={provided.innerRef}
+                      className={`max-h-96 overflow-y-auto p-4 space-y-2 ${
+                        snapshot.isDraggingOver ? 'bg-blue-50' : ''
+                      }`}
+                    >
+                      {filteredIndicators.map((indicator, index) => (
                         <Draggable
-                          key={`selected-${indicator.Id}`}
-                          draggableId={`selected-indicator-${indicator.Id}`}
+                          key={indicator.Id}
+                          draggableId={`indicator-${indicator.Id}`}
                           index={index}
                         >
                           {(provided, snapshot) => (
                             <div
                               ref={provided.innerRef}
                               {...provided.draggableProps}
-                              className={`relative p-4 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow ${
-                                snapshot.isDragging ? 'rotate-1 shadow-lg z-50' : ''
+                              {...provided.dragHandleProps}
+                              className={`p-3 bg-white border border-gray-200 rounded-lg cursor-grab hover:shadow-md transition-shadow ${
+                                snapshot.isDragging ? 'rotate-2 shadow-lg z-50' : ''
+                              } ${
+                                selectedIndicators.find(ind => ind.Id === indicator.Id) ? 'opacity-50' : ''
                               }`}
                             >
-                              <div
-                                {...provided.dragHandleProps}
-                                className="absolute top-2 right-2 p-1 text-gray-400 hover:text-gray-600 cursor-grab"
-                              >
-                                <ApperIcon name="GripVertical" size={16} />
-                              </div>
-                              
-                              <button
-                                onClick={() => removeIndicator(indicator.Id)}
-                                className="absolute top-2 right-8 p-1 text-gray-400 hover:text-red-500 transition-colors"
-                              >
-                                <ApperIcon name="X" size={16} />
-                              </button>
-                              
-                              <div className="pr-16">
-                                <h4 className="font-medium text-gray-900 text-sm mb-2">
-                                  {indicator.name}
-                                </h4>
-                                <div className="space-y-1 text-xs text-gray-600">
-                                  <div className="flex justify-between">
-                                    <span>Category:</span>
-                                    <span className="font-medium">{indicator.category}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span>Type:</span>
-                                    <span className="font-medium">{indicator.type}</span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span>Target:</span>
-                                    <span className="font-medium">
-                                      {indicator.target?.toLocaleString()} {indicator.unit}
-                                    </span>
-                                  </div>
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                  <h4 className="text-sm font-medium text-gray-900 truncate">
+                                    {indicator.name}
+                                  </h4>
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    {indicator.category} • {indicator.unit}
+                                  </p>
                                 </div>
+                                <ApperIcon name="GripVertical" size={16} className="text-gray-400 ml-2" />
                               </div>
                             </div>
                           )}
                         </Draggable>
                       ))}
+                      {provided.placeholder}
+                      
+                      {filteredIndicators.length === 0 && (
+                        <div className="text-center py-8 text-gray-500">
+                          <ApperIcon name="Search" size={24} className="mx-auto mb-2 opacity-50" />
+                          <p className="text-sm">No indicators found</p>
+                        </div>
+                      )}
                     </div>
-                    {provided.placeholder}
-                  </div>
-                )}
-              </Droppable>
-            </Card>
-          </div>
-        </DragDropContext>
+                  )}
+                </Droppable>
+              </Card>
 
-        {/* Report Configuration & Generation */}
-        <Card>
-          <div className="p-4 border-b border-gray-200">
-            <h3 className="font-medium text-gray-900">Report Configuration</h3>
-          </div>
-          
-          <div className="p-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
-              <Input
-                label="Report Title"
-                value={filters.reportTitle}
-                onChange={(e) => handleFilterChange("reportTitle", e.target.value)}
-                placeholder="Enter report title..."
-                className="lg:col-span-2"
-              />
-
-              <Select
-                label="Country"
-                value={filters.country}
-                onChange={(e) => handleFilterChange("country", e.target.value)}
-                options={[
-                  { value: "", label: "All Countries" },
-                  ...countries.map(c => ({ value: c.Id.toString(), label: c.name }))
-                ]}
-              />
-
-              <Select
-                label="Project"
-                value={filters.project}
-                onChange={(e) => handleFilterChange("project", e.target.value)}
-                options={[
-                  { value: "", label: "All Projects" },
-                  ...filteredProjects.map(p => ({ value: p.Id.toString(), label: p.name }))
-                ]}
-                disabled={!filters.country}
-              />
-
-              <Select
-                label="Period"
-                value={filters.period}
-                onChange={(e) => handleFilterChange("period", e.target.value)}
-                options={periods}
-              />
-
-              <Select
-                label="Format"
-                value={filters.format}
-                onChange={(e) => handleFilterChange("format", e.target.value)}
-                options={formats}
-              />
-            </div>
-
-            <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-              <div className="text-sm text-gray-600">
-                Custom report with {selectedIndicators.length} indicators from {filters.period}
-                {filters.country && ` for ${countries.find(c => c.Id === parseInt(filters.country))?.name}`}
-                {filters.project && ` (${filteredProjects.find(p => p.Id === parseInt(filters.project))?.name})`}
-              </div>
-              
-              <div className="flex space-x-3">
-                <Button variant="outline">
-                  <ApperIcon name="Eye" size={16} className="mr-2" />
-                  Preview
-                </Button>
-                <Button 
-                  onClick={handleGenerateReport}
-                  loading={generating}
-                  disabled={selectedIndicators.length === 0}
-                >
-                  <ApperIcon name="Download" size={16} className="mr-2" />
-                  Generate Report
-                </Button>
-              </div>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      {/* Recent Reports */}
-      <div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Recent Reports</h2>
-        <Card>
-          <div className="space-y-4">
-            {[
-              {
-                name: "Q1 2024 Board Report",
-                type: "Quarterly",
-                generated: "2024-03-28",
-                size: "2.4 MB",
-                format: "PDF",
-                status: "completed"
-              },
-              {
-                name: "Cambodia Country Performance",
-                type: "Country",
-                generated: "2024-03-25",
-                size: "1.8 MB", 
-                format: "Excel",
-                status: "completed"
-              },
-              {
-                name: "Donor Impact Summary",
-                type: "Donor",
-                generated: "2024-03-20",
-                size: "3.1 MB",
-                format: "PDF", 
-                status: "completed"
-              }
-            ].map((report, index) => (
-              <div key={index} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                <div className="flex items-center space-x-4">
-                  <div className="w-10 h-10 bg-gradient-to-r from-primary/20 to-secondary/20 rounded-lg flex items-center justify-center">
-                    <ApperIcon name="FileText" size={20} className="text-primary" />
-                  </div>
-                  <div>
-                    <div className="font-medium text-gray-900">{report.name}</div>
-                    <div className="text-sm text-gray-600">
-                      {report.type} • Generated {report.generated} • {report.size}
+              {/* Report Canvas */}
+              <Card className="lg:col-span-2">
+                <div className="p-4 border-b border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-medium text-gray-900">Report Design Canvas</h3>
+                    <div className="text-sm text-gray-500">
+                      {selectedIndicators.length} indicators selected
                     </div>
                   </div>
                 </div>
                 
-                <div className="flex items-center space-x-2">
-                  <div className="text-xs bg-success text-white px-2 py-1 rounded-full">
-                    {report.format}
-                  </div>
-                  <Button variant="ghost" size="sm">
-                    <ApperIcon name="Download" size={14} />
-                  </Button>
-                  <Button variant="ghost" size="sm">
-                    <ApperIcon name="Share" size={14} />
-                  </Button>
+                <Droppable droppableId="selectedIndicators">
+                  {(provided, snapshot) => (
+                    <div
+                      {...provided.droppableProps}
+                      ref={provided.innerRef}
+                      className={`min-h-96 p-4 ${
+                        snapshot.isDraggingOver ? 'bg-green-50' : selectedIndicators.length === 0 ? 'bg-gray-50' : ''
+                      }`}
+                    >
+                      {selectedIndicators.length === 0 && (
+                        <div className="flex flex-col items-center justify-center h-80 text-gray-400 border-2 border-dashed border-gray-300 rounded-lg">
+                          <ApperIcon name="Plus" size={32} className="mb-3" />
+                          <p className="text-lg font-medium">Drop indicators here</p>
+                          <p className="text-sm">Drag indicators from the library to build your report</p>
+                        </div>
+                      )}
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {selectedIndicators.map((indicator, index) => (
+                          <Draggable
+                            key={`selected-${indicator.Id}`}
+                            draggableId={`selected-indicator-${indicator.Id}`}
+                            index={index}
+                          >
+                            {(provided, snapshot) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                className={`relative p-4 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow ${
+                                  snapshot.isDragging ? 'rotate-1 shadow-lg z-50' : ''
+                                }`}
+                              >
+                                <div
+                                  {...provided.dragHandleProps}
+                                  className="absolute top-2 right-2 p-1 text-gray-400 hover:text-gray-600 cursor-grab"
+                                >
+                                  <ApperIcon name="GripVertical" size={16} />
+                                </div>
+                                
+                                <button
+                                  onClick={() => removeIndicator(indicator.Id)}
+                                  className="absolute top-2 right-8 p-1 text-gray-400 hover:text-red-500 transition-colors"
+                                >
+                                  <ApperIcon name="X" size={16} />
+                                </button>
+                                
+                                <div className="pr-16">
+                                  <h4 className="font-medium text-gray-900 text-sm mb-2">
+                                    {indicator.name}
+                                  </h4>
+                                  <div className="space-y-1 text-xs text-gray-600">
+                                    <div className="flex justify-between">
+                                      <span>Category:</span>
+                                      <span className="font-medium">{indicator.category}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span>Type:</span>
+                                      <span className="font-medium">{indicator.type}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                      <span>Target:</span>
+                                      <span className="font-medium">
+                                        {indicator.target?.toLocaleString()} {indicator.unit}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </Draggable>
+                        ))}
+                      </div>
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              </Card>
+            </div>
+        </DragDropContext>
+
+{/* Report Configuration & Generation */}
+          {/* Report Configuration */}
+          <Card>
+              <div className="p-4 border-b border-gray-200">
+                <h3 className="font-medium text-gray-900">Report Configuration</h3>
+              </div>
+              
+              <div className="p-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
+                  <Input
+                    label="Report Title"
+                    value={filters.reportTitle}
+                    onChange={(e) => handleFilterChange("reportTitle", e.target.value)}
+                    placeholder="Enter report title..."
+                    className="lg:col-span-2"
+                  />
+
+                  <Select
+                    label="Country"
+                    value={filters.country}
+                    onChange={(e) => handleFilterChange("country", e.target.value)}
+                    options={[
+                      { value: "", label: "All Countries" },
+                      ...countries.map(c => ({ value: c.Id.toString(), label: c.name }))
+                    ]}
+                  />
+
+                  <Select
+                    label="Project"
+                    value={filters.project}
+                    onChange={(e) => handleFilterChange("project", e.target.value)}
+                    options={[
+                      { value: "", label: "All Projects" },
+                      ...filteredProjects.map(p => ({ value: p.Id.toString(), label: p.name }))
+                    ]}
+                    disabled={!filters.country}
+                  />
+
+                  <Select
+                    label="Period"
+                    value={filters.period}
+                    onChange={(e) => handleFilterChange("period", e.target.value)}
+                    options={periods}
+                  />
+
+                  <Select
+                    label="Format"
+                    value={filters.format}
+                    onChange={(e) => handleFilterChange("format", e.target.value)}
+                    options={formats}
+                  />
                 </div>
+
+                <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                  <div className="text-sm text-gray-600">
+                    Custom report with {selectedIndicators.length} indicators from {filters.period}
+                    {filters.country && ` for ${countries.find(c => c.Id === parseInt(filters.country))?.name}`}
+                    {filters.project && ` (${filteredProjects.find(p => p.Id === parseInt(filters.project))?.name})`}
+                  </div>
+                  
+                  <div className="flex space-x-3">
+                    <Button variant="outline" onClick={handlePreviewReport}>
+                      <ApperIcon name="Eye" size={16} className="mr-2" />
+                      Preview
+                    </Button>
+                    <Button 
+                      onClick={handleGenerateReport}
+                      loading={generating}
+                      disabled={selectedIndicators.length === 0}
+                    >
+                      <ApperIcon name="Download" size={16} className="mr-2" />
+                      Generate Report
+                    </Button>
+                  </div>
+                </div>
+</div>
+            </Card>
+          </div>
+        </>
+      )}
+
+      {/* Export Queue */}
+      {reports?.queue?.length > 0 && (
+        <Card className="mb-6">
+          <div className="p-4 border-b border-gray-200">
+            <h3 className="font-medium text-gray-900">Export Queue</h3>
+          </div>
+          <div className="p-4 space-y-3">
+            {reports.queue.map((item) => (
+              <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                    {item.status === "generating" ? (
+                      <ApperIcon name="Loader" size={20} className="text-primary animate-spin" />
+                    ) : (
+                      <ApperIcon name="CheckCircle" size={20} className="text-success" />
+                    )}
+                  </div>
+                  <div>
+                    <div className="font-medium text-gray-900">{item.name}</div>
+                    <div className="text-sm text-gray-600">
+                      {item.status === "generating" ? `${item.progress}% complete` : "Ready for download"}
+                    </div>
+                  </div>
+                </div>
+                
+                {item.status === "completed" && (
+                  <Button size="sm">
+                    <ApperIcon name="Download" size={14} className="mr-1" />
+                    Download
+                  </Button>
+                )}
               </div>
             ))}
           </div>
         </Card>
-      </div>
+      )}
+
+      {/* Report History */}
+{activeTab === "history" && (
+        <>
+          {/* Recent Reports */}
+          <div>
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Report History</h2>
+            <p className="text-gray-600">Access and re-download previously generated reports</p>
+          </div>
+          
+          <Card>
+            <div className="space-y-4">
+              {(reports?.history || [
+                {
+                  id: "1",
+                  name: "Q1 2024 Board Report",
+                  type: "Template",
+                  generated: "2024-03-28",
+                  size: "2.4 MB",
+                  format: "PDF",
+                  indicatorCount: 8
+                },
+                {
+                  id: "2",
+                  name: "Cambodia Country Performance",
+                  type: "Template",
+                  generated: "2024-03-25",
+                  size: "1.8 MB", 
+                  format: "EXCEL",
+                  indicatorCount: 9
+                },
+                {
+                  id: "3",
+                  name: "Custom Impact Analysis",
+                  type: "Custom",
+                  generated: "2024-03-20",
+                  size: "3.1 MB",
+                  format: "PDF",
+                  indicatorCount: 12
+                }
+              ]).map((report) => (
+                <div key={report.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-10 h-10 bg-gradient-to-r from-primary/20 to-secondary/20 rounded-lg flex items-center justify-center">
+                      <ApperIcon name="FileText" size={20} className="text-primary" />
+                    </div>
+                    <div>
+                      <div className="font-medium text-gray-900">{report.name}</div>
+                      <div className="text-sm text-gray-600">
+                        {report.type} • {report.indicatorCount} indicators • Generated {report.generated} • {report.size}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2">
+                    <div className="text-xs bg-success text-white px-2 py-1 rounded-full">
+                      {report.format}
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => toast.success("Download started")}>
+                      <ApperIcon name="Download" size={14} />
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => toast.info("Share link copied to clipboard")}>
+                      <ApperIcon name="Share" size={14} />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              
+              {(!reports?.history || reports.history.length === 0) && (
+                <div className="text-center py-12 text-gray-500">
+                  <ApperIcon name="FileText" size={32} className="mx-auto mb-3 opacity-50" />
+                  <p>No reports generated yet</p>
+                  <p className="text-sm mt-1">Generated reports will appear here for easy access</p>
+                </div>
+              )}
+            </div>
+</Card>
+        </div>
+        </>
+      )}
     </div>
   );
 };

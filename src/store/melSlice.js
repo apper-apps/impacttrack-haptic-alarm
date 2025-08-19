@@ -39,6 +39,19 @@ bulkImport: {
       isValid: true
     },
     draft: {}
+  },
+  reports: {
+    queue: [],
+    history: [],
+    templates: {
+      usage: {},
+      lastGenerated: {}
+    },
+    analytics: {
+      totalGenerated: 0,
+      monthlyCount: 0,
+      popularFormats: []
+    }
   }
 };
 
@@ -121,6 +134,51 @@ clearBulkImportState: (state) => {
         validation: { errors: {}, isValid: true },
         draft: {}
       };
+    },
+    setReportQueue: (state, action) => {
+      const existingIndex = state.reports.queue.findIndex(r => r.id === action.payload.id);
+      if (existingIndex !== -1) {
+        state.reports.queue[existingIndex] = action.payload;
+      } else {
+        state.reports.queue.push(action.payload);
+      }
+    },
+    updateReportProgress: (state, action) => {
+      const { id, ...updates } = action.payload;
+      const reportIndex = state.reports.queue.findIndex(r => r.id === id);
+      if (reportIndex !== -1) {
+        state.reports.queue[reportIndex] = { ...state.reports.queue[reportIndex], ...updates };
+        
+        // Remove from queue if completed
+        if (updates.status === "completed") {
+          state.reports.queue = state.reports.queue.filter(r => r.id !== id);
+        }
+      }
+    },
+    addReportToHistory: (state, action) => {
+      state.reports.history.unshift(action.payload);
+      state.reports.analytics.totalGenerated += 1;
+      
+      // Keep only last 50 reports
+      if (state.reports.history.length > 50) {
+        state.reports.history = state.reports.history.slice(0, 50);
+      }
+    },
+    removeReportFromHistory: (state, action) => {
+      state.reports.history = state.reports.history.filter(r => r.id !== action.payload);
+    },
+    updateTemplateUsage: (state, action) => {
+      const { templateId, timestamp } = action.payload;
+      state.reports.templates.usage[templateId] = (state.reports.templates.usage[templateId] || 0) + 1;
+      state.reports.templates.lastGenerated[templateId] = timestamp;
+    },
+    clearReportsState: (state) => {
+      state.reports = {
+        queue: [],
+        history: [],
+        templates: { usage: {}, lastGenerated: {} },
+        analytics: { totalGenerated: 0, monthlyCount: 0, popularFormats: [] }
+      };
     }
   },
 });
@@ -138,11 +196,17 @@ export const {
   setBulkImportLoading,
   setBulkImportProgress,
   setBulkImportError,
-  clearBulkImportState,
+clearBulkImportState,
   setDataEntryProgress,
   setDataEntryAutoSave,
   setDataEntryValidation,
   setDataEntryDraft,
-  clearDataEntryState
+  clearDataEntryState,
+  setReportQueue,
+  updateReportProgress,
+  addReportToHistory,
+  removeReportFromHistory,
+  updateTemplateUsage,
+  clearReportsState
 } = melSlice.actions;
 export default melSlice.reducer;
