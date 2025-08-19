@@ -22,8 +22,21 @@ const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+const [statusFilter, setStatusFilter] = useState("");
   const [riskFilter, setRiskFilter] = useState("");
+
+  const statusOptions = [
+    { value: "active", label: "Active" },
+    { value: "completed", label: "Completed" },
+    { value: "paused", label: "Paused" },
+    { value: "inactive", label: "Inactive" }
+  ];
+
+  const riskOptions = [
+    { value: "low", label: "Low Risk" },
+    { value: "medium", label: "Medium Risk" },
+    { value: "high", label: "High Risk" }
+  ];
   const [selectedProjects, setSelectedProjects] = useState([]);
   const [bulkLoading, setBulkLoading] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -514,30 +527,23 @@ const handleSelectAll = (checked) => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-          </div>
+</div>
           <div className="flex flex-col sm:flex-row gap-2">
             <Select
+              options={statusOptions}
               value={statusFilter}
-              onChange={setStatusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              placeholder="All Statuses"
               className="min-w-[140px]"
-            >
-              <option value="">All Statuses</option>
-              <option value="active">Active</option>
-              <option value="completed">Completed</option>
-              <option value="paused">Paused</option>
-              <option value="inactive">Inactive</option>
-            </Select>
+            />
             
             <Select
+              options={riskOptions}
               value={riskFilter}
-              onChange={setRiskFilter}
+              onChange={(e) => setRiskFilter(e.target.value)}
+              placeholder="All Risk Levels"
               className="min-w-[140px]"
-            >
-              <option value="">All Risk Levels</option>
-              <option value="low">Low Risk</option>
-              <option value="medium">Medium Risk</option>
-              <option value="high">High Risk</option>
-            </Select>
+            />
             
             <Button 
               variant="outline" 
