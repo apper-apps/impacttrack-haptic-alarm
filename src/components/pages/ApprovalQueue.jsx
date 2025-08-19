@@ -492,34 +492,37 @@ dispatch(addAuditTrailEntry({
       {/* Filters */}
       <Card className="p-4">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <Select
+<Select
             value={filters.status}
             onChange={(value) => dispatch(setApprovalQueueFilters({ status: value }))}
-          >
-            <option value="all">All Status</option>
-            <option value="submitted">Submitted</option>
-            <option value="in_review">In Review</option>
-          </Select>
+            options={[
+              { value: "all", label: "All Status" },
+              { value: "submitted", label: "Submitted" },
+              { value: "in_review", label: "In Review" }
+            ]}
+          />
           
-          <Select
+<Select
             value={filters.priority}
             onChange={(value) => dispatch(setApprovalQueueFilters({ priority: value }))}
-          >
-            <option value="all">All Priorities</option>
-            <option value="high">High Priority</option>
-            <option value="medium">Medium Priority</option>
-            <option value="low">Low Priority</option>
-          </Select>
+            options={[
+              { value: "all", label: "All Priorities" },
+              { value: "high", label: "High Priority" },
+              { value: "medium", label: "Medium Priority" },
+              { value: "low", label: "Low Priority" }
+            ]}
+          />
 
-          <Select
+<Select
             value={filters.dateRange}
             onChange={(value) => dispatch(setApprovalQueueFilters({ dateRange: value }))}
-          >
-            <option value="all">All Time</option>
-            <option value="today">Today</option>
-            <option value="week">This Week</option>
-            <option value="month">This Month</option>
-          </Select>
+            options={[
+              { value: "all", label: "All Time" },
+              { value: "today", label: "Today" },
+              { value: "week", label: "This Week" },
+              { value: "month", label: "This Month" }
+            ]}
+          />
 
           <div className="flex items-center space-x-2">
             <label className="text-sm text-gray-600">Quality Threshold:</label>
