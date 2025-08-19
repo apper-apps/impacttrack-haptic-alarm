@@ -572,29 +572,34 @@ const handleSubmit = async (e) => {
         return;
       }
       
-      // Submit data for approval workflow instead of auto-approval
-      const promises = validEntries.map(entry => dataPointService.create({
-        indicatorId: entry.indicatorId,
-        projectId: parseInt(selectedProject),
-        countryId: selectedCountry?.Id,
-        value: parseFloat(entry.value),
-        period: selectedPeriod,
-        submittedBy: currentUser.name,
-        status: "submitted", // Changed from "approved" to workflow
-        submittedAt: new Date().toISOString(),
-        approvalWorkflow: "submitted",
-        qualityScore: qualityScoresTemp[entry.indicatorId] || 85,
-        previousPeriodValue: previousPeriodData[entry.indicatorId]?.value || null,
-        varianceFromPrevious: previousPeriodData[entry.indicatorId]?.value 
-          ? ((parseFloat(entry.value) - previousPeriodData[entry.indicatorId].value) / previousPeriodData[entry.indicatorId].value * 100)
-          : null,
-        auditTrail: [{
-          action: "submitted",
-          timestamp: new Date().toISOString(),
-          user: currentUser.name,
-          comment: "Initial submission for review"
-        }]
-      }));
+// Submit data for approval workflow - handle resubmissions
+      const promises = validEntries.map(entry => {
+        const currentStatus = submissionStatuses[entry.indicatorId];
+        const isResubmission = currentStatus === "rejected" || currentStatus === "changes_requested";
+        
+        return dataPointService.create({
+          indicatorId: entry.indicatorId,
+          projectId: parseInt(selectedProject),
+          countryId: selectedCountry?.Id,
+          value: parseFloat(entry.value),
+          period: selectedPeriod,
+          submittedBy: currentUser.name,
+          status: "submitted", // Always submitted for workflow
+          submittedAt: new Date().toISOString(),
+          approvalWorkflow: "submitted",
+          qualityScore: qualityScoresTemp[entry.indicatorId] || 85,
+          previousPeriodValue: previousPeriodData[entry.indicatorId]?.value || null,
+          varianceFromPrevious: previousPeriodData[entry.indicatorId]?.value 
+            ? ((parseFloat(entry.value) - previousPeriodData[entry.indicatorId].value) / previousPeriodData[entry.indicatorId].value * 100)
+            : null,
+          auditTrail: [{
+            action: isResubmission ? "resubmitted" : "submitted",
+            timestamp: new Date().toISOString(),
+            user: currentUser.name,
+            comment: isResubmission ? "Resubmitted after addressing feedback" : "Initial submission for review"
+          }]
+        });
+      });
 
       const createdDataPoints = await Promise.all(promises);
       
@@ -1017,14 +1022,34 @@ const handleSubmit = async (e) => {
                               className={`text-center ${hasError ? 'border-error' : ''}`}
                               min="0"
                               step={entry.indicatorType === "currency" ? "0.01" : "1"}
-                              disabled={submissionStatus === "submitted" || submissionStatus === "in_review"}
+disabled={submissionStatus === "submitted" || submissionStatus === "in_review" || submissionStatus === "approved"}
                             />
                             {hasError && (
                               <div className="text-xs text-error">{hasError}</div>
                             )}
-                            {workflowData?.feedback && (
-                              <div className="text-xs text-blue-600 bg-blue-50 p-2 rounded mt-1">
-                                <strong>Feedback:</strong> {workflowData.feedback}
+{workflowData?.feedback && (
+                              <div className={`text-xs p-2 rounded mt-1 ${
+                                submissionStatus === "rejected" ? "text-red-600 bg-red-50" :
+                                submissionStatus === "changes_requested" ? "text-orange-600 bg-orange-50" :
+                                "text-blue-600 bg-blue-50"
+                              }`}>
+                                <div className="flex items-center gap-1 mb-1">
+                                  <ApperIcon 
+                                    name={submissionStatus === "rejected" ? "XCircle" : 
+                                          submissionStatus === "changes_requested" ? "AlertCircle" : "MessageSquare"} 
+                                    size={12} 
+                                  />
+                                  <strong>
+                                    {submissionStatus === "rejected" ? "Rejected:" : 
+                                     submissionStatus === "changes_requested" ? "Changes Requested:" : "Feedback:"}
+                                  </strong>
+                                </div>
+                                {workflowData.feedback}
+                                {(submissionStatus === "rejected" || submissionStatus === "changes_requested") && (
+                                  <div className="mt-1 text-xs opacity-75">
+                                    Please address the feedback above and resubmit.
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>

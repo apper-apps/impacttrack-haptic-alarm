@@ -191,13 +191,16 @@ updateDashboardMetrics: (state, action) => {
       };
     },
     setApprovalStatus: (state, action) => {
-      const { dataPointId, status, approvedBy } = action.payload;
+const { dataPointId, status, approvedBy, feedback } = action.payload;
       state.approvals = {
         ...state.approvals,
         [dataPointId]: {
           status,
-          approvedBy,
-          approvedAt: new Date().toISOString()
+          approvedBy: approvedBy || null,
+          approvedAt: status === 'approved' ? new Date().toISOString() : null,
+          rejectedAt: status === 'rejected' ? new Date().toISOString() : null,
+          feedback: feedback || null,
+          workflowStage: status
         }
       };
     },
@@ -265,12 +268,20 @@ updateDashboardMetrics: (state, action) => {
       const { dataPointId, score } = action.payload;
       state.qualityManagement.scores[dataPointId] = score;
     },
-    addAuditTrailEntry: (state, action) => {
+addAuditTrailEntry: (state, action) => {
       const entry = {
         ...action.payload,
         id: `audit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        metadata: {
+          ...action.payload.metadata,
+          workflowStage: action.payload.action,
+          systemGenerated: false
+        }
       };
+      if (!state.qualityManagement.auditTrail) {
+        state.qualityManagement.auditTrail = [];
+      }
       state.qualityManagement.auditTrail.unshift(entry);
     },
     setQualityThresholds: (state, action) => {

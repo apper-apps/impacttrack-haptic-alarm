@@ -197,9 +197,8 @@ const ApprovalQueue = () => {
       return;
     }
 
-    try {
+try {
       await dataPointService.reject(item.Id, rejectionReason, currentUser.name);
-      
       dispatch(updateApprovalQueueItem({
         id: item.id,
         updates: {
@@ -209,12 +208,16 @@ const ApprovalQueue = () => {
           feedback: rejectionReason
         }
       }));
-
-      dispatch(addAuditTrailEntry({
+dispatch(addAuditTrailEntry({
         dataPointId: item.Id,
         action: 'rejected',
         user: currentUser.name,
-        comment: rejectionReason
+        comment: rejectionReason,
+        metadata: {
+          indicatorName: item.indicatorName,
+          value: item.value,
+          qualityScore: item.qualityScore
+        }
       }));
 
       toast.success("Data rejected and feedback sent to submitter");
@@ -644,10 +647,15 @@ const ApprovalQueue = () => {
                 <Button
                   variant="ghost"
                   onClick={() => {
-                    const reason = feedback || prompt("Please provide a reason for rejection:");
-                    if (reason) {
-                      handleReject(reviewItem, reason);
+if (feedback.trim()) {
+                      handleReject(reviewItem, feedback);
                       setReviewModalOpen(false);
+                    } else {
+                      const reason = prompt("Please provide a reason for rejection:");
+                      if (reason && reason.trim()) {
+                        handleReject(reviewItem, reason);
+                        setReviewModalOpen(false);
+                      }
                     }
                   }}
                   className="text-error hover:bg-error/10"

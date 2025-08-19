@@ -78,13 +78,14 @@ async approve(id, approverName = "System", feedback = "") {
       throw new Error(`DataPoint with ID ${id} not found`);
     }
     
-    const rejectionData = {
-      status: "rejected",
+const rejectionData = {
+      status: "draft", // Return to draft state for editing
       rejectedBy: rejectorName,
       rejectedAt: new Date().toISOString(),
       rejectionReason: reason,
       approvalWorkflow: "rejected",
       feedback: reason,
+      rejectionCount: (existingItem.rejectionCount || 0) + 1,
       auditTrail: [
         ...(existingItem.auditTrail || []),
         {
@@ -165,12 +166,14 @@ async getPendingReview() {
       throw new Error(`DataPoint with ID ${id} not found`);
     }
     
-    return this.updateSubmissionStatus(id, "changes_requested", {
+return this.updateSubmissionStatus(id, "draft", { // Return to draft for editing
       feedback: feedback,
       reviewedBy: reviewerName,
       reviewedAt: new Date().toISOString(),
       updatedBy: reviewerName,
-      comment: `Changes requested: ${feedback}`
+      comment: `Changes requested: ${feedback}`,
+      changesRequestedCount: (existingItem.changesRequestedCount || 0) + 1,
+      approvalWorkflow: "changes_requested" // Track workflow stage separately
     });
   },
 
