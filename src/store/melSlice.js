@@ -190,17 +190,23 @@ updateDashboardMetrics: (state, action) => {
         lastRefreshTrigger: new Date().toISOString()
       };
     },
-    setApprovalStatus: (state, action) => {
-const { dataPointId, status, approvedBy, feedback } = action.payload;
+setApprovalStatus: (state, action) => {
+      const { dataPointId, status, approvedBy, feedback, approvedAt, rejectedAt } = action.payload;
+      
+      // Ensure all values are serializable
+      const serializedStatus = typeof status === 'string' ? status : String(status);
+      const serializedApprovedBy = approvedBy ? String(approvedBy) : null;
+      const serializedFeedback = feedback ? String(feedback) : null;
+      
       state.approvals = {
         ...state.approvals,
         [dataPointId]: {
-          status,
-          approvedBy: approvedBy || null,
-          approvedAt: status === 'approved' ? new Date().toISOString() : null,
-          rejectedAt: status === 'rejected' ? new Date().toISOString() : null,
-          feedback: feedback || null,
-          workflowStage: status
+          status: serializedStatus,
+          approvedBy: serializedApprovedBy,
+          approvedAt: approvedAt || (serializedStatus === 'approved' ? new Date().toISOString() : null),
+          rejectedAt: rejectedAt || (serializedStatus === 'rejected' ? new Date().toISOString() : null),
+          feedback: serializedFeedback,
+          workflowStage: serializedStatus
         }
       };
     },

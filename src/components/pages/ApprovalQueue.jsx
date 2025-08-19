@@ -151,13 +151,13 @@ const ApprovalQueue = () => {
     try {
       await dataPointService.approve(item.Id, currentUser.name, approvalFeedback);
       
-      dispatch(updateApprovalQueueItem({
+dispatch(updateApprovalQueueItem({
         id: item.id,
         updates: {
           status: 'approved',
-          approvedBy: currentUser.name,
+          approvedBy: String(currentUser.name),
           approvedAt: new Date().toISOString(),
-          feedback: approvalFeedback
+          feedback: approvalFeedback ? String(approvalFeedback) : null
         }
       }));
 
@@ -199,13 +199,13 @@ const ApprovalQueue = () => {
 
 try {
       await dataPointService.reject(item.Id, rejectionReason, currentUser.name);
-      dispatch(updateApprovalQueueItem({
+dispatch(updateApprovalQueueItem({
         id: item.id,
         updates: {
           status: 'rejected',
-          rejectedBy: currentUser.name,
+          rejectedBy: String(currentUser.name),
           rejectedAt: new Date().toISOString(),
-          feedback: rejectionReason
+          feedback: String(rejectionReason)
         }
       }));
 dispatch(addAuditTrailEntry({
@@ -239,13 +239,13 @@ dispatch(addAuditTrailEntry({
     try {
       await dataPointService.requestChanges(item.Id, changeRequests, currentUser.name);
       
-      dispatch(updateApprovalQueueItem({
+dispatch(updateApprovalQueueItem({
         id: item.id,
         updates: {
           status: 'changes_requested',
-          reviewedBy: currentUser.name,
+          reviewedBy: String(currentUser.name),
           reviewedAt: new Date().toISOString(),
-          feedback: changeRequests
+          feedback: String(changeRequests)
         }
       }));
 
