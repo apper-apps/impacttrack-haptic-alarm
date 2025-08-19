@@ -339,7 +339,7 @@ dispatch(addAuditTrailEntry({
         <div className="text-center">
           <div className="font-semibold text-lg">{value.toLocaleString()}</div>
           <div className="text-xs text-gray-500">{item.indicatorUnit}</div>
-          {item.varianceFromPrevious !== null && (
+{item.varianceFromPrevious != null && typeof item.varianceFromPrevious === 'number' && (
             <div className={`text-xs ${Math.abs(item.varianceFromPrevious) > 20 ? 'text-orange-600' : 'text-gray-600'}`}>
               {item.varianceFromPrevious > 0 ? '+' : ''}{item.varianceFromPrevious.toFixed(1)}%
             </div>
