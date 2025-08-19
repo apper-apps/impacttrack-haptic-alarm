@@ -22,7 +22,12 @@ export const dataPointService = {
     return { ...dataPoint };
   },
 
-  async getByProject(projectId) {
+async getByProject(projectId) {
+    await delay(300);
+    return dataPointsData.filter(dp => dp.projectId === parseInt(projectId)).map(dp => ({ ...dp }));
+  },
+
+  async getByProjectId(projectId) {
     await delay(300);
     return dataPointsData.filter(dp => dp.projectId === parseInt(projectId)).map(dp => ({ ...dp }));
   },
