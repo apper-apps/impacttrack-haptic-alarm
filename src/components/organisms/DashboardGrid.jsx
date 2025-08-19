@@ -180,11 +180,11 @@ const DashboardGrid = () => {
         performance,
         target: Math.round(countryTraining * 1.15) // 15% growth target
       };
-    })
+})
     .sort((a, b) => b.reach - a.reach);
-.sort((a, b) => b.reach - a.reach);
 
 const countryChartData = [
+    {
       name: "Current Performance",
       data: countryData.map(c => c.reach)
     },
