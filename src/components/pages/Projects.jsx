@@ -26,6 +26,19 @@ const [projects, setProjects] = useState([]);
   const [riskFilter, setRiskFilter] = useState("");
   const [selectedProjects, setSelectedProjects] = useState([]);
   const [bulkLoading, setBulkLoading] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createLoading, setCreateLoading] = useState(false);
+  const [newProject, setNewProject] = useState({
+    name: '',
+    description: '',
+    countryId: '',
+    startDate: '',
+    endDate: '',
+    targetReach: '',
+    budget: '',
+    status: 'active'
+  });
+
   const loadData = async () => {
     setLoading(true);
     setError(null);
@@ -309,6 +322,58 @@ const handleExport = async () => {
     }
   };
 
+const handleCreateProject = async () => {
+    if (!newProject.name.trim()) {
+      toast.error("Project name is required");
+      return;
+    }
+    if (!newProject.countryId) {
+      toast.error("Please select a country");
+      return;
+    }
+    if (!newProject.startDate || !newProject.endDate) {
+      toast.error("Start and end dates are required");
+      return;
+    }
+    if (new Date(newProject.endDate) <= new Date(newProject.startDate)) {
+      toast.error("End date must be after start date");
+      return;
+    }
+
+    setCreateLoading(true);
+    try {
+      const projectData = {
+        ...newProject,
+        countryId: parseInt(newProject.countryId),
+        targetReach: parseInt(newProject.targetReach) || 0,
+        currentReach: 0,
+        budget: parseInt(newProject.budget) || 0
+      };
+
+      await projectService.create(projectData);
+      await loadData(); // Reload projects list
+      
+      // Reset form
+      setNewProject({
+        name: '',
+        description: '',
+        countryId: '',
+        startDate: '',
+        endDate: '',
+        targetReach: '',
+        budget: '',
+        status: 'active'
+      });
+      
+      setShowCreateModal(false);
+      toast.success("Project created successfully!");
+    } catch (error) {
+      toast.error("Failed to create project: " + error.message);
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
 const handleSelectAll = (checked) => {
     if (checked) {
       const validProjectIds = filteredProjects?.filter(p => p?.Id).map(p => p.Id) || [];
@@ -366,7 +431,7 @@ const handleSelectAll = (checked) => {
             <ApperIcon name="Download" size={16} className="mr-2" />
             Export Data
           </Button>
-          <Button>
+<Button onClick={() => setShowCreateModal(true)}>
             <ApperIcon name="Plus" size={16} className="mr-2" />
             New Project
           </Button>
@@ -551,6 +616,174 @@ const handleSelectAll = (checked) => {
             loading={loading}
           />
         </Card>
+)}
+
+      {/* Create Project Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">Create New Project</h2>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setShowCreateModal(false)}
+                  disabled={createLoading}
+                >
+                  <ApperIcon name="X" size={16} />
+                </Button>
+              </div>
+
+              <form onSubmit={(e) => { e.preventDefault(); handleCreateProject(); }} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Project Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={newProject.name}
+                      onChange={(e) => setNewProject({...newProject, name: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                      placeholder="Enter project name"
+                      required
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Description
+                    </label>
+                    <textarea
+                      value={newProject.description}
+                      onChange={(e) => setNewProject({...newProject, description: e.target.value})}
+                      rows="3"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                      placeholder="Describe the project objectives and scope"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Country *
+                    </label>
+                    <select
+                      value={newProject.countryId}
+                      onChange={(e) => setNewProject({...newProject, countryId: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                      required
+                    >
+                      <option value="">Select a country</option>
+                      {countries.map(country => (
+                        <option key={country.Id} value={country.Id}>
+                          {country.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Status
+                    </label>
+                    <select
+                      value={newProject.status}
+                      onChange={(e) => setNewProject({...newProject, status: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                    >
+                      <option value="active">Active</option>
+                      <option value="paused">Paused</option>
+                      <option value="inactive">Inactive</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Start Date *
+                    </label>
+                    <input
+                      type="date"
+                      value={newProject.startDate}
+                      onChange={(e) => setNewProject({...newProject, startDate: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      End Date *
+                    </label>
+                    <input
+                      type="date"
+                      value={newProject.endDate}
+                      onChange={(e) => setNewProject({...newProject, endDate: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Target Participants
+                    </label>
+                    <input
+                      type="number"
+                      value={newProject.targetReach}
+                      onChange={(e) => setNewProject({...newProject, targetReach: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                      placeholder="0"
+                      min="0"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Budget (USD)
+                    </label>
+                    <input
+                      type="number"
+                      value={newProject.budget}
+                      onChange={(e) => setNewProject({...newProject, budget: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                      placeholder="0"
+                      min="0"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end space-x-3 pt-6 mt-6 border-t border-gray-200">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowCreateModal(false)}
+                    disabled={createLoading}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={createLoading}
+                    className="min-w-[120px]"
+                  >
+                    {createLoading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        <ApperIcon name="Plus" size={16} className="mr-2" />
+                        Create Project
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
