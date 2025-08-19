@@ -23,7 +23,7 @@ bulkImport: {
     progress: 0,
     error: null
   },
-  dataEntry: {
+dataEntry: {
     progress: {
       completed: 0,
       total: 0,
@@ -39,6 +39,33 @@ bulkImport: {
       isValid: true
     },
     draft: {}
+  },
+  approvalQueue: {
+    items: [],
+    loading: false,
+    error: null,
+    filters: {
+      status: 'all',
+      priority: 'all',
+      submitter: 'all',
+      dateRange: 'all'
+    },
+    sortBy: 'submittedAt',
+    sortOrder: 'desc'
+  },
+  validationRules: {
+    rules: {},
+    loading: false,
+    error: null
+  },
+  qualityManagement: {
+    scores: {},
+    auditTrail: [],
+    qualityThresholds: {
+      high: 90,
+      medium: 75,
+      low: 60
+    }
   },
 reports: {
     queue: [],
@@ -145,7 +172,7 @@ clearBulkImportState: (state) => {
 };
     },
     // Real-time dashboard metric updates upon approval
-    updateDashboardMetrics: (state, action) => {
+updateDashboardMetrics: (state, action) => {
       const { metrics } = action.payload;
       state.dashboard = {
         ...state.dashboard,
@@ -172,6 +199,84 @@ clearBulkImportState: (state) => {
           approvedBy,
           approvedAt: new Date().toISOString()
         }
+      };
+    },
+    // Approval Queue Management
+    addToApprovalQueue: (state, action) => {
+      const item = {
+        ...action.payload,
+        id: `approval_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        status: 'submitted',
+        addedAt: new Date().toISOString()
+      };
+      state.approvalQueue.items.unshift(item);
+    },
+    setApprovalQueueItems: (state, action) => {
+      state.approvalQueue.items = action.payload;
+    },
+    updateApprovalQueueItem: (state, action) => {
+      const { id, updates } = action.payload;
+      const index = state.approvalQueue.items.findIndex(item => item.id === id);
+      if (index !== -1) {
+        state.approvalQueue.items[index] = {
+          ...state.approvalQueue.items[index],
+          ...updates,
+          updatedAt: new Date().toISOString()
+        };
+      }
+    },
+    removeFromApprovalQueue: (state, action) => {
+      const id = action.payload;
+      state.approvalQueue.items = state.approvalQueue.items.filter(item => item.id !== id);
+    },
+    setApprovalQueueFilters: (state, action) => {
+      state.approvalQueue.filters = {
+        ...state.approvalQueue.filters,
+        ...action.payload
+      };
+    },
+    setApprovalQueueSort: (state, action) => {
+      const { sortBy, sortOrder } = action.payload;
+      state.approvalQueue.sortBy = sortBy;
+      state.approvalQueue.sortOrder = sortOrder;
+    },
+    setApprovalQueueLoading: (state, action) => {
+      state.approvalQueue.loading = action.payload;
+    },
+    setApprovalQueueError: (state, action) => {
+      state.approvalQueue.error = action.payload;
+    },
+    // Validation Rules Management
+    setValidationRules: (state, action) => {
+      state.validationRules.rules = action.payload;
+    },
+    updateValidationRule: (state, action) => {
+      const { indicatorId, rules } = action.payload;
+      state.validationRules.rules[indicatorId] = rules;
+    },
+    setValidationRulesLoading: (state, action) => {
+      state.validationRules.loading = action.payload;
+    },
+    setValidationRulesError: (state, action) => {
+      state.validationRules.error = action.payload;
+    },
+    // Quality Management
+    setQualityScore: (state, action) => {
+      const { dataPointId, score } = action.payload;
+      state.qualityManagement.scores[dataPointId] = score;
+    },
+    addAuditTrailEntry: (state, action) => {
+      const entry = {
+        ...action.payload,
+        id: `audit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        timestamp: new Date().toISOString()
+      };
+      state.qualityManagement.auditTrail.unshift(entry);
+    },
+    setQualityThresholds: (state, action) => {
+      state.qualityManagement.qualityThresholds = {
+        ...state.qualityManagement.qualityThresholds,
+        ...action.payload
       };
     },
     setReportQueue: (state, action) => {
@@ -247,8 +352,23 @@ export const {
   removeReportFromHistory,
   updateTemplateUsage,
   clearReportsState,
-  updateDashboardMetrics,
+updateDashboardMetrics,
   refreshDashboardData,
-  setApprovalStatus
+  setApprovalStatus,
+  addToApprovalQueue,
+  setApprovalQueueItems,
+  updateApprovalQueueItem,
+  removeFromApprovalQueue,
+  setApprovalQueueFilters,
+  setApprovalQueueSort,
+  setApprovalQueueLoading,
+  setApprovalQueueError,
+  setValidationRules,
+  updateValidationRule,
+  setValidationRulesLoading,
+  setValidationRulesError,
+  setQualityScore,
+  addAuditTrailEntry,
+  setQualityThresholds
 } = melSlice.actions;
 export default melSlice.reducer;

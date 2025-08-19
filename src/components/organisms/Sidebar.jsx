@@ -25,6 +25,12 @@ const Sidebar = () => {
       description: "Submit performance data"
     },
     {
+      name: "Approval Queue",
+      href: "/approval-queue",
+      icon: "CheckSquare",
+      description: "Review and approve data"
+    },
+    {
       name: "Projects",
       href: "/projects",
       icon: "FolderOpen",

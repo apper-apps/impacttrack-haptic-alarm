@@ -15,7 +15,7 @@ import Input from "@/components/atoms/Input";
 import Button from "@/components/atoms/Button";
 import Card from "@/components/atoms/Card";
 import Select from "@/components/atoms/Select";
-import { setDataEntryAutoSave, setDataEntryDraft, setDataEntryProgress, setDataEntryValidation, updateDashboardMetrics, refreshDashboardData, setApprovalStatus } from "@/store/melSlice";
+import { setDataEntryAutoSave, setDataEntryDraft, setDataEntryProgress, setDataEntryValidation, updateDashboardMetrics, refreshDashboardData, setApprovalStatus, addToApprovalQueue } from "@/store/melSlice";
 
 const DataEntry = () => {
   const dispatch = useDispatch();
@@ -35,6 +35,7 @@ const DataEntry = () => {
   const [selectedPeriod, setSelectedPeriod] = useState("2024-Q1");
 const [dataEntries, setDataEntries] = useState([]);
   const [submitting, setSubmitting] = useState(false);
+  const [validationRulesEngine, setValidationRulesEngine] = useState({});
   
   // Enhanced features
   const [validationErrors, setValidationErrors] = useState({});
@@ -43,8 +44,10 @@ const [dataEntries, setDataEntries] = useState([]);
   const [isDraftSaving, setIsDraftSaving] = useState(false);
   
   // Submission tracking states
-  const [submissionStatuses, setSubmissionStatuses] = useState({});
+const [submissionStatuses, setSubmissionStatuses] = useState({});
   const [approvalWorkflow, setApprovalWorkflow] = useState({});
+  const [qualityScores, setQualityScores] = useState({});
+  const [previousPeriodData, setPreviousPeriodData] = useState({});
   // Refs for auto-save
   const autoSaveTimerRef = useRef(null);
   const isInitialLoadRef = useRef(true);
@@ -126,7 +129,7 @@ const [dataEntries, setDataEntries] = useState([]);
   }, [selectedCountry]);
   // Initialize data entry form when project changes
 // Generate form entries when project is selected
-  useEffect(() => {
+useEffect(() => {
     if (selectedProject && indicators.length > 0) {
       // Filter indicators assigned to user's role and projects
       const userAssignedIndicators = indicators
@@ -138,6 +141,19 @@ const [dataEntries, setDataEntries] = useState([]);
           return indicator.scope?.includes("general");
         })
         .slice(0, 12); // First 12 indicators assigned to user
+      
+      // Load enhanced validation rules engine
+      const validationEngine = {};
+      userAssignedIndicators.forEach(indicator => {
+        validationEngine[indicator.Id] = {
+          ...indicator.validationRules,
+          rangeCheck: indicator.validationRules?.range || {},
+          logicalConsistency: indicator.validationRules?.consistency || [],
+          completenessRules: indicator.validationRules?.completeness || {},
+          qualityThresholds: indicator.validationRules?.quality || {}
+        };
+      });
+      setValidationRulesEngine(validationEngine);
       
       const entries = userAssignedIndicators.map(indicator => ({
         indicatorId: indicator.Id,
@@ -151,18 +167,21 @@ const [dataEntries, setDataEntries] = useState([]);
         validationRules: indicator.validationRules || {},
         submissionStatus: submissionStatuses[indicator.Id] || "draft",
         approvalStage: approvalWorkflow[indicator.Id] || null,
+        qualityScore: qualityScores[indicator.Id] || null,
         submittedAt: null,
         reviewedAt: null,
-        feedback: null
+        feedback: null,
+        varianceFromPrevious: null
       }));
       
       setDataEntries(entries);
       setValidationErrors({});
       
-      // Load submission statuses for existing data points
+      // Load submission statuses and previous period data for comparison
       loadSubmissionStatuses(userAssignedIndicators.map(i => i.Id));
+      loadPreviousPeriodData(userAssignedIndicators.map(i => i.Id));
       
-      // Update progress tracking
+      // Update progress tracking with enhanced workflow metrics
       const completedEntries = entries.filter(entry => entry.value && entry.value !== "");
       const approvedEntries = entries.filter(entry => submissionStatuses[entry.indicatorId] === "approved");
       const pendingReview = entries.filter(entry => submissionStatuses[entry.indicatorId] === "submitted" || submissionStatuses[entry.indicatorId] === "in_review");
@@ -179,6 +198,11 @@ const [dataEntries, setDataEntries] = useState([]);
           inReview: entries.filter(e => submissionStatuses[e.indicatorId] === "in_review").length,
           approved: approvedEntries.length,
           rejected: entries.filter(e => submissionStatuses[e.indicatorId] === "rejected").length
+        },
+        qualityMetrics: {
+          averageQualityScore: calculateAverageQualityScore(entries),
+          completenessRate: (completedEntries.length / entries.length) * 100,
+          validationPassRate: calculateValidationPassRate(entries)
         }
       }));
       
@@ -187,11 +211,13 @@ const [dataEntries, setDataEntries] = useState([]);
       setValidationErrors({});
       setSubmissionStatuses({});
       setApprovalWorkflow({});
+      setQualityScores({});
+      setPreviousPeriodData({});
     }
-  }, [selectedProject, indicators, currentUser.role, dataEntry.draft, submissionStatuses, approvalWorkflow, dispatch]);
+  }, [selectedProject, indicators, currentUser.role, dataEntry.draft, submissionStatuses, approvalWorkflow, qualityScores, dispatch]);
 
   // Load submission statuses for indicators
-  const loadSubmissionStatuses = async (indicatorIds) => {
+const loadSubmissionStatuses = async (indicatorIds) => {
     try {
       const statusPromises = indicatorIds.map(async (indicatorId) => {
         const dataPoints = await dataPointService.getAll();
@@ -206,15 +232,18 @@ const [dataEntries, setDataEntries] = useState([]);
           workflow: existingPoint?.approvalWorkflow || null,
           submittedAt: existingPoint?.submittedAt || null,
           reviewedAt: existingPoint?.reviewedAt || null,
-          feedback: existingPoint?.feedback || null
+          feedback: existingPoint?.feedback || null,
+          qualityScore: existingPoint?.qualityScore || null,
+          auditTrail: existingPoint?.auditTrail || []
         };
       });
 
       const statuses = await Promise.all(statusPromises);
       const statusMap = {};
       const workflowMap = {};
+      const qualityMap = {};
 
-      statuses.forEach(({ indicatorId, status, workflow, submittedAt, reviewedAt, feedback }) => {
+      statuses.forEach(({ indicatorId, status, workflow, submittedAt, reviewedAt, feedback, qualityScore }) => {
         statusMap[indicatorId] = status;
         workflowMap[indicatorId] = {
           stage: workflow,
@@ -222,12 +251,76 @@ const [dataEntries, setDataEntries] = useState([]);
           reviewedAt,
           feedback
         };
+        qualityMap[indicatorId] = qualityScore;
       });
 
       setSubmissionStatuses(statusMap);
       setApprovalWorkflow(workflowMap);
+      setQualityScores(qualityMap);
     } catch (error) {
       console.error("Error loading submission statuses:", error);
+    }
+  };
+
+  // Load previous period data for variance analysis
+  const loadPreviousPeriodData = async (indicatorIds) => {
+    try {
+      const currentPeriod = selectedPeriod;
+      const previousPeriod = getPreviousPeriod(currentPeriod);
+      
+      if (!previousPeriod) return;
+
+      const previousDataPromises = indicatorIds.map(async (indicatorId) => {
+        const dataPoints = await dataPointService.getAll();
+        const previousPoint = dataPoints.find(dp => 
+          dp.indicatorId === indicatorId && 
+          dp.projectId === selectedProject?.Id &&
+          dp.countryId === selectedCountry?.Id &&
+          dp.period === previousPeriod &&
+          dp.status === "approved"
+        );
+        return {
+          indicatorId,
+          previousValue: previousPoint?.value || null,
+          previousPeriod: previousPeriod
+        };
+      });
+
+      const previousData = await Promise.all(previousDataPromises);
+      const previousDataMap = {};
+
+      previousData.forEach(({ indicatorId, previousValue, previousPeriod }) => {
+        previousDataMap[indicatorId] = {
+          value: previousValue,
+          period: previousPeriod
+        };
+      });
+
+      setPreviousPeriodData(previousDataMap);
+    } catch (error) {
+      console.error("Error loading previous period data:", error);
+    }
+  };
+
+  // Helper functions for quality metrics
+  const calculateAverageQualityScore = (entries) => {
+    const scores = entries.filter(e => qualityScores[e.indicatorId]).map(e => qualityScores[e.indicatorId]);
+    return scores.length > 0 ? scores.reduce((sum, score) => sum + score, 0) / scores.length : 0;
+  };
+
+  const calculateValidationPassRate = (entries) => {
+    const validatedEntries = entries.filter(e => e.value && validateEntry(e) === null);
+    return entries.length > 0 ? (validatedEntries.length / entries.length) * 100 : 0;
+  };
+
+  const getPreviousPeriod = (currentPeriod) => {
+    const [year, quarter] = currentPeriod.split('-Q');
+    const quarterNum = parseInt(quarter);
+    
+    if (quarterNum === 1) {
+      return `${parseInt(year) - 1}-Q4`;
+    } else {
+      return `${year}-Q${quarterNum - 1}`;
     }
   };
 
@@ -308,6 +401,7 @@ const [dataEntries, setDataEntries] = useState([]);
   };
 
 const validateEntry = (entry) => {
+    // Basic required field validation
     if (entry.isRequired && (!entry.value || entry.value === "")) {
       return "This field is required";
     }
@@ -321,7 +415,21 @@ const validateEntry = (entry) => {
       return "Value must be a valid number";
     }
 
-    if (numValue < 0) {
+    // Enhanced validation rules engine
+    const rules = validationRulesEngine[entry.indicatorId] || {};
+    
+    // Range validation
+    if (rules.rangeCheck) {
+      if (rules.rangeCheck.min !== undefined && numValue < rules.rangeCheck.min) {
+        return `Value must be at least ${rules.rangeCheck.min}`;
+      }
+      if (rules.rangeCheck.max !== undefined && numValue > rules.rangeCheck.max) {
+        return `Value cannot exceed ${rules.rangeCheck.max}`;
+      }
+    }
+
+    // Type-specific validation
+    if (numValue < 0 && !rules.allowNegative) {
       return "Value cannot be negative";
     }
 
@@ -329,7 +437,46 @@ const validateEntry = (entry) => {
       return "Percentage cannot exceed 100%";
     }
     
-    // Custom validation rules
+    // Previous period variance validation
+    const previousData = previousPeriodData[entry.indicatorId];
+    if (previousData?.value && rules.varianceThreshold) {
+      const variance = Math.abs((numValue - previousData.value) / previousData.value) * 100;
+      if (variance > rules.varianceThreshold) {
+        return `Variance of ${variance.toFixed(1)}% from previous period exceeds threshold of ${rules.varianceThreshold}%`;
+      }
+    }
+
+    // Logical consistency validation
+    if (rules.logicalConsistency && rules.logicalConsistency.length > 0) {
+      for (const consistencyRule of rules.logicalConsistency) {
+        const relatedEntry = dataEntries.find(e => e.indicatorId === consistencyRule.relatedIndicatorId);
+        if (relatedEntry && relatedEntry.value) {
+          const relatedValue = parseFloat(relatedEntry.value);
+          
+          switch (consistencyRule.operator) {
+            case 'equals':
+              if (numValue !== relatedValue) {
+                return `Value must equal ${consistencyRule.relatedIndicatorName}`;
+              }
+              break;
+            case 'sum_equals':
+              const sumIndicators = consistencyRule.sumOf.map(id => 
+                dataEntries.find(e => e.indicatorId === id)
+              ).filter(e => e && e.value);
+              
+              if (sumIndicators.length === consistencyRule.sumOf.length) {
+                const sum = sumIndicators.reduce((total, e) => total + parseFloat(e.value), 0);
+                if (numValue !== sum) {
+                  return `Total must equal sum of related indicators`;
+                }
+              }
+              break;
+          }
+        }
+      }
+    }
+    
+    // Custom validation rules (backward compatibility)
     if (entry.validationRules) {
       if (entry.validationRules.min && numValue < entry.validationRules.min) {
         return `Value must be at least ${entry.validationRules.min}`;
@@ -338,23 +485,42 @@ const validateEntry = (entry) => {
         return `Value cannot exceed ${entry.validationRules.max}`;
       }
     }
+
+    return null;
+  };
+
+  // Calculate data quality score
+  const calculateQualityScore = (entry) => {
+    let score = 100;
     
-    // Logical rule checking (e.g., female + male = total participants)
-    if (entry.indicatorType === "participants") {
-      const femaleEntry = dataEntries.find(e => e.indicatorName.toLowerCase().includes("female"));
-      const maleEntry = dataEntries.find(e => e.indicatorName.toLowerCase().includes("male"));
-      const totalEntry = dataEntries.find(e => e.indicatorName.toLowerCase().includes("total"));
-      
-      if (femaleEntry && maleEntry && totalEntry && entry === totalEntry) {
-        const femaleVal = parseFloat(femaleEntry.value) || 0;
-        const maleVal = parseFloat(maleEntry.value) || 0;
-        if (numValue !== (femaleVal + maleVal)) {
-          return "Total must equal sum of female and male participants";
+    // Completeness (40% weight)
+    if (!entry.value || entry.value === "") {
+      score -= 40;
+    }
+    
+    // Timeliness (20% weight)
+    const submissionDeadline = new Date(); // Could be configured per project
+    const submissionDate = new Date(entry.submittedAt || Date.now());
+    if (submissionDate > submissionDeadline) {
+      score -= 20;
+    }
+    
+    // Consistency (40% weight)
+    const validationError = validateEntry(entry);
+    if (validationError) {
+      score -= 40;
+    } else {
+      // Additional consistency checks
+      const previousData = previousPeriodData[entry.indicatorId];
+      if (previousData?.value) {
+        const variance = Math.abs((parseFloat(entry.value) - previousData.value) / previousData.value) * 100;
+        if (variance > 50) { // High variance reduces quality score
+          score -= Math.min(20, variance / 5);
         }
       }
     }
-
-    return null;
+    
+    return Math.max(0, Math.round(score));
   };
 
 const handleSubmit = async (e) => {
@@ -370,9 +536,10 @@ const handleSubmit = async (e) => {
       }
     }
     
-    // Validate all entries
+    // Enhanced validation with quality scoring
     const newValidationErrors = {};
     let hasErrors = false;
+    const qualityScoresTemp = {};
     
     dataEntries.forEach((entry) => {
       const error = validateEntry(entry);
@@ -380,9 +547,15 @@ const handleSubmit = async (e) => {
         newValidationErrors[entry.indicatorId] = error;
         hasErrors = true;
       }
+      
+      // Calculate quality score for each entry
+      if (entry.value && entry.value !== "") {
+        qualityScoresTemp[entry.indicatorId] = calculateQualityScore(entry);
+      }
     });
     
     setValidationErrors(newValidationErrors);
+    setQualityScores(prev => ({ ...prev, ...qualityScoresTemp }));
     
     if (hasErrors) {
       const firstError = Object.values(newValidationErrors)[0];
@@ -399,23 +572,52 @@ const handleSubmit = async (e) => {
         return;
       }
       
+      // Submit data for approval workflow instead of auto-approval
       const promises = validEntries.map(entry => dataPointService.create({
         indicatorId: entry.indicatorId,
         projectId: parseInt(selectedProject),
+        countryId: selectedCountry?.Id,
         value: parseFloat(entry.value),
         period: selectedPeriod,
         submittedBy: currentUser.name,
-        status: "approved", // Auto-approve for immediate dashboard updates
+        status: "submitted", // Changed from "approved" to workflow
         submittedAt: new Date().toISOString(),
-        approvedAt: new Date().toISOString(),
-        approvedBy: "system"
+        approvalWorkflow: "submitted",
+        qualityScore: qualityScoresTemp[entry.indicatorId] || 85,
+        previousPeriodValue: previousPeriodData[entry.indicatorId]?.value || null,
+        varianceFromPrevious: previousPeriodData[entry.indicatorId]?.value 
+          ? ((parseFloat(entry.value) - previousPeriodData[entry.indicatorId].value) / previousPeriodData[entry.indicatorId].value * 100)
+          : null,
+        auditTrail: [{
+          action: "submitted",
+          timestamp: new Date().toISOString(),
+          user: currentUser.name,
+          comment: "Initial submission for review"
+        }]
       }));
 
       const createdDataPoints = await Promise.all(promises);
       
-      toast.success(
-        `Successfully submitted and approved ${validEntries.length} data points. Dashboard metrics updated in real-time!`
-      );
+      // Add to approval queue in Redux
+      validEntries.forEach((entry, index) => {
+        const dataPoint = createdDataPoints[index];
+        dispatch(addToApprovalQueue({
+          dataPointId: dataPoint.Id,
+          indicatorId: entry.indicatorId,
+          indicatorName: entry.indicatorName,
+          projectId: parseInt(selectedProject),
+          countryId: selectedCountry?.Id,
+          value: parseFloat(entry.value),
+          submittedBy: currentUser.name,
+          submittedAt: new Date().toISOString(),
+          priority: entry.isRequired ? "high" : "medium",
+          qualityScore: qualityScoresTemp[entry.indicatorId] || 85,
+          previousValue: previousPeriodData[entry.indicatorId]?.value || null,
+          variance: previousPeriodData[entry.indicatorId]?.value 
+            ? ((parseFloat(entry.value) - previousPeriodData[entry.indicatorId].value) / previousPeriodData[entry.indicatorId].value * 100)
+            : null
+        }));
+      });
       
       // Update submission statuses and approval workflow
       const newSubmissionStatuses = { ...submissionStatuses };
@@ -423,70 +625,65 @@ const handleSubmit = async (e) => {
       
       validEntries.forEach((entry, index) => {
         const dataPointId = createdDataPoints[index].Id;
-        newSubmissionStatuses[entry.indicatorId] = "approved";
+        newSubmissionStatuses[entry.indicatorId] = "submitted";
         newApprovalWorkflow[entry.indicatorId] = {
-          stage: "approved",
+          stage: "submitted",
           submittedAt: new Date().toISOString(),
-          reviewedAt: new Date().toISOString(),
-          approvedAt: new Date().toISOString(),
-          feedback: "Auto-approved upon submission"
+          reviewedAt: null,
+          approvedAt: null,
+          feedback: null,
+          dataPointId: dataPointId
         };
-        
-        // Set approval status in Redux for real-time dashboard updates
-        dispatch(setApprovalStatus({
-          dataPointId,
-          status: "approved",
-          approvedBy: "system"
-        }));
       });
       
       setSubmissionStatuses(newSubmissionStatuses);
       setApprovalWorkflow(newApprovalWorkflow);
       
-      // Trigger real-time dashboard metric updates
-      const totalValue = validEntries.reduce((sum, entry) => sum + parseFloat(entry.value), 0);
-      dispatch(updateDashboardMetrics({
-        totalPeopleReached: totalValue,
-        lastSubmission: {
-          projectId: parseInt(selectedProject),
-          count: validEntries.length,
-          value: totalValue,
-          timestamp: new Date().toISOString()
-        }
-      }));
-      
-      // Trigger dashboard refresh for immediate updates
-      dispatch(refreshDashboardData());
-      
-      // Show success notification with dashboard integration
       toast.success(
-        `Dashboard metrics updated! Your ${validEntries.length} data points are now reflected in organizational dashboards.`,
+        `Successfully submitted ${validEntries.length} data points for review and approval!`,
         { autoClose: 4000 }
       );
       
-      // Update progress tracking
+      toast.info(
+        `Your data is now in the approval queue. Check the Approval Queue to track review progress.`,
+        { autoClose: 6000 }
+      );
+      
+      // Update progress tracking for workflow
       dispatch(setDataEntryProgress({ 
         completed: dataEntries.length, 
         total: dataEntries.length,
         submitted: validEntries.length,
-        approved: validEntries.length
+        pendingReview: validEntries.length,
+        approved: 0,
+        submissionWorkflow: {
+          draft: dataEntries.length - validEntries.length,
+          submitted: validEntries.length,
+          inReview: 0,
+          approved: 0,
+          rejected: 0
+        }
       }));
+      
       dispatch(setDataEntryDraft({}));
       dispatch(setDataEntryAutoSave({ lastSaved: null, isDirty: false }));
       
       // Reset form values but maintain approval tracking
-      setDataEntries(prev => prev.map(entry => ({ 
-        ...entry, 
-        value: "",
-        submissionStatus: newSubmissionStatuses[entry.indicatorId] || "draft",
-        approvalStage: newApprovalWorkflow[entry.indicatorId] || null
-      })));
+      setDataEntries(prev => prev.map(entry => {
+        const wasSubmitted = validEntries.some(ve => ve.indicatorId === entry.indicatorId);
+        return {
+          ...entry, 
+          value: wasSubmitted ? "" : entry.value,
+          submissionStatus: newSubmissionStatuses[entry.indicatorId] || "draft",
+          approvalStage: newApprovalWorkflow[entry.indicatorId] || null
+        };
+      }));
       setValidationErrors({});
       setHasUnsavedChanges(false);
       setLastSavedTime(null);
     } catch (err) {
       console.error("Submission error:", err);
-      toast.error("Failed to submit data. Please try again.");
+      toast.error("Failed to submit data for approval. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -718,7 +915,7 @@ const handleSubmit = async (e) => {
                       Progress
                     </th>
 <th className="text-center py-4 px-4 font-semibold text-gray-900">
-                      Status & Workflow
+                      Quality & Status
                     </th>
                   </tr>
                 </thead>
@@ -730,14 +927,22 @@ const handleSubmit = async (e) => {
                     const isCompleted = entry.value && entry.value !== "" && !hasError;
                     const submissionStatus = submissionStatuses[entry.indicatorId] || "draft";
                     const workflowData = approvalWorkflow[entry.indicatorId];
+                    const qualityScore = qualityScores[entry.indicatorId];
+                    const previousData = previousPeriodData[entry.indicatorId];
                     
-                    // Determine row styling based on submission status
+                    // Calculate variance for display
+                    const variance = previousData?.value && entry.value 
+                      ? ((parseFloat(entry.value) - previousData.value) / previousData.value * 100)
+                      : null;
+                    
+                    // Determine row styling based on submission status and quality
                     const getRowClass = () => {
                       if (hasError) return 'bg-red-50';
                       if (submissionStatus === "approved") return 'bg-green-50';
                       if (submissionStatus === "rejected") return 'bg-red-50';
                       if (submissionStatus === "in_review") return 'bg-blue-50';
                       if (submissionStatus === "submitted") return 'bg-yellow-50';
+                      if (qualityScore && qualityScore < 70) return 'bg-orange-50';
                       if (isCompleted) return 'bg-green-50';
                       return '';
                     };
@@ -780,11 +985,24 @@ const handleSubmit = async (e) => {
                                   Feedback available
                                 </div>
                               )}
+                              {variance !== null && Math.abs(variance) > 20 && (
+                                <div className="text-sm text-orange-600 mt-1">
+                                  <ApperIcon name="TrendingUp" size={12} className="inline mr-1" />
+                                  {variance > 0 ? '+' : ''}{variance.toFixed(1)}% vs previous
+                                </div>
+                              )}
                             </div>
                           </div>
                         </td>
                         <td className="text-center py-4 px-4 text-gray-600 font-medium">
-                          {formatValue(entry.baseline, entry.indicatorType, entry.indicatorUnit)}
+                          <div>
+                            {formatValue(entry.baseline, entry.indicatorType, entry.indicatorUnit)}
+                          </div>
+                          {previousData?.value && (
+                            <div className="text-xs text-gray-500 mt-1">
+                              Previous: {formatValue(previousData.value, entry.indicatorType, entry.indicatorUnit)}
+                            </div>
+                          )}
                         </td>
                         <td className="text-center py-4 px-4 text-gray-600 font-medium">
                           {formatValue(entry.target, entry.indicatorType, entry.indicatorUnit)}
@@ -826,7 +1044,19 @@ const handleSubmit = async (e) => {
                           )}
                         </td>
                         <td className="text-center py-4 px-4">
-                          <div className="space-y-1">
+                          <div className="space-y-2">
+                            {/* Quality Score */}
+                            {qualityScore && (
+                              <div className={`px-2 py-1 rounded text-xs font-medium ${
+                                qualityScore >= 90 ? "bg-success text-white" :
+                                qualityScore >= 75 ? "bg-info text-white" :
+                                qualityScore >= 60 ? "bg-warning text-white" :
+                                "bg-error text-white"
+                              }`}>
+                                Quality: {qualityScore}%
+                              </div>
+                            )}
+                            
                             {/* Submission Status Badge */}
                             <div className={`px-2 py-1 rounded-full text-xs font-medium inline-flex items-center gap-1 ${
                               submissionStatus === "approved" ? "bg-success text-white" :
@@ -895,8 +1125,8 @@ const handleSubmit = async (e) => {
               <div className="flex items-center justify-between">
                 <div className="space-y-2">
                   <div className="text-sm text-gray-600">
-                    <ApperIcon name="Info" size={16} className="inline mr-1" />
-                    Data will be submitted for review and approval by the MEL Lead
+<ApperIcon name="Info" size={16} className="inline mr-1" />
+                    Data will be submitted to the Approval Queue for comprehensive review and quality validation
                   </div>
                   <div className="text-sm text-info">
                     <ApperIcon name="Shield" size={16} className="inline mr-1" />

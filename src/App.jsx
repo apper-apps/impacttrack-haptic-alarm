@@ -1,27 +1,29 @@
 import React from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
+import ApprovalQueue from "@/components/pages/ApprovalQueue";
+import CountryDetail from "@/components/pages/CountryDetail";
 import Projects from "@/components/pages/Projects";
 import DataEntry from "@/components/pages/DataEntry";
-import BulkImport from "@/components/pages/BulkImport";
+import Countries from "@/components/pages/Countries";
 import Dashboard from "@/components/pages/Dashboard";
+import BulkImport from "@/components/pages/BulkImport";
 import Settings from "@/components/pages/Settings";
 import Analytics from "@/components/pages/Analytics";
 import Reports from "@/components/pages/Reports";
 import NotificationCenter from "@/components/pages/NotificationCenter";
-import Countries from "@/components/pages/Countries";
-import CountryDetail from "@/components/pages/CountryDetail";
 import Layout from "@/components/organisms/Layout";
 
-const App = () => {
+function App() {
   return (
     <BrowserRouter>
       <div className="min-h-screen bg-background">
-<Routes>
-<Route path="/" element={<Layout />}>
-            <Route index element={<Navigate to="/dashboard" replace />} />
+        <Routes>
+          <Route path="/" element={<Layout />}>
+<Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="data-entry" element={<DataEntry />} />
+            <Route path="approval-queue" element={<ApprovalQueue />} />
             <Route path="bulk-import" element={<BulkImport />} />
             <Route path="projects" element={<Projects />} />
             <Route path="countries" element={<Countries />} />

@@ -87,6 +87,13 @@ const Dashboard = () => {
                 {dashboard?.lastUpdated && `Updated ${new Date(dashboard.lastUpdated).toLocaleTimeString()}`}
               </div>
             </div>
+            <div className="bg-white/10 backdrop-blur rounded-lg p-4 text-center">
+              <div className="text-2xl font-bold text-warning">{metrics?.pendingApprovals || 0}</div>
+              <div className="text-xs text-primary-200">Pending Approval</div>
+              <div className="text-xs text-primary-300 mt-1">
+                Quality-driven workflow
+              </div>
+            </div>
           </div>
         </div>
       </div>

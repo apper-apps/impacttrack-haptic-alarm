@@ -1,5 +1,9 @@
 import dataPointsData from "@/services/mockData/dataPoints.json";
 import projectsData from "@/services/mockData/projects.json";
+import indicatorsData from "@/services/mockData/indicators.json";
+import usersData from "@/services/mockData/users.json";
+import React from "react";
+import Error from "@/components/ui/Error";
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -40,37 +44,90 @@ export const dataPointService = {
     return dataPointsData.filter(dp => projectIds.includes(dp.projectId)).map(dp => ({ ...dp }));
   },
 // Approval workflow methods
-  async approve(id, approverName = "System") {
+async approve(id, approverName = "System", feedback = "") {
     await delay(300);
-    return this.update(id, {
+    const existingItem = dataPointsData.find(item => item.Id === id);
+    if (!existingItem) {
+      throw new Error(`DataPoint with ID ${id} not found`);
+    }
+    
+    const approvalData = {
       status: "approved",
       approvedBy: approverName,
       approvedAt: new Date().toISOString(),
-      approvalWorkflow: "approved"
-    });
+      approvalWorkflow: "approved",
+      feedback: feedback,
+      auditTrail: [
+        ...(existingItem.auditTrail || []),
+        {
+          action: "approved",
+          timestamp: new Date().toISOString(),
+          user: approverName,
+          comment: feedback || "Data approved for dashboard integration"
+        }
+      ]
+    };
+    
+    return this.update(id, approvalData);
   },
 
   async reject(id, reason = "", rejectorName = "System") {
     await delay(300);
-    return this.update(id, {
+    const existingItem = dataPointsData.find(item => item.Id === id);
+    if (!existingItem) {
+      throw new Error(`DataPoint with ID ${id} not found`);
+    }
+    
+    const rejectionData = {
       status: "rejected",
       rejectedBy: rejectorName,
       rejectedAt: new Date().toISOString(),
       rejectionReason: reason,
       approvalWorkflow: "rejected",
-      feedback: reason
-    });
+      feedback: reason,
+      auditTrail: [
+        ...(existingItem.auditTrail || []),
+        {
+          action: "rejected",
+          timestamp: new Date().toISOString(),
+          user: rejectorName,
+comment: reason || "Data rejected - requires revision"
+        }
+      ]
+    };
+    
+    return this.update(id, rejectionData);
   },
-
 // Get submissions pending review
-  async getPendingReview() {
+async getPendingReview() {
     await delay(200);
-    return dataPointsData.filter(item => 
+    const pendingItems = dataPointsData.filter(item => 
       item.status === "submitted" || item.status === "in_review"
-    ).map(item => ({ ...item }));
+    );
+    
+    // Enrich with additional metadata for approval queue
+    const enrichedItems = pendingItems.map(item => {
+      const indicator = indicatorsData.find(ind => ind.Id === item.indicatorId);
+      const project = projectsData.find(proj => proj.Id === item.projectId);
+      const submitter = usersData.find(user => user.name === item.submittedBy);
+      
+      return {
+        ...item,
+        indicatorName: indicator?.name || "Unknown Indicator",
+        indicatorUnit: indicator?.unit || "",
+        indicatorType: indicator?.type || "",
+        projectName: project?.name || "Unknown Project",
+        countryName: project?.country || "Unknown Country",
+        submitterRole: submitter?.role || "Unknown Role",
+        priority: item.isRequired ? "high" : "medium",
+        daysSinceSubmission: Math.floor((Date.now() - new Date(item.submittedAt).getTime()) / (1000 * 60 * 60 * 24))
+      };
+    });
+    
+    return enrichedItems;
   },
 
-  // Update submission status (for workflow management)
+// Update submission status (for workflow management)
   async updateSubmissionStatus(id, status, additionalData = {}) {
     await delay(200);
     const index = dataPointsData.findIndex(item => item.Id === id);
@@ -78,16 +135,73 @@ export const dataPointService = {
       throw new Error(`DataPoint with ID ${id} not found`);
     }
 
+    const currentItem = dataPointsData[index];
     const updatedData = {
-      ...dataPointsData[index],
+      ...currentItem,
       status,
       approvalWorkflow: status,
       ...additionalData,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      auditTrail: [
+        ...(currentItem.auditTrail || []),
+        {
+          action: `status_change_to_${status}`,
+          timestamp: new Date().toISOString(),
+          user: additionalData.updatedBy || "System",
+          comment: additionalData.comment || `Status changed to ${status}`
+        }
+      ]
     };
 
     dataPointsData[index] = updatedData;
     return { ...updatedData };
+  },
+
+  // Request changes (workflow step)
+  async requestChanges(id, feedback, reviewerName = "System") {
+    await delay(300);
+    const existingItem = dataPointsData.find(item => item.Id === id);
+    if (!existingItem) {
+      throw new Error(`DataPoint with ID ${id} not found`);
+    }
+    
+    return this.updateSubmissionStatus(id, "changes_requested", {
+      feedback: feedback,
+      reviewedBy: reviewerName,
+      reviewedAt: new Date().toISOString(),
+      updatedBy: reviewerName,
+      comment: `Changes requested: ${feedback}`
+    });
+  },
+
+  // Mark as in review
+  async markInReview(id, reviewerName = "System") {
+    await delay(200);
+    return this.updateSubmissionStatus(id, "in_review", {
+      reviewedBy: reviewerName,
+      reviewStartedAt: new Date().toISOString(),
+      updatedBy: reviewerName,
+      comment: `Review started by ${reviewerName}`
+    });
+  },
+
+  // Get approval statistics
+  async getApprovalStats() {
+    await delay(200);
+    const stats = {
+      total: dataPointsData.length,
+      submitted: dataPointsData.filter(item => item.status === "submitted").length,
+      inReview: dataPointsData.filter(item => item.status === "in_review").length,
+      approved: dataPointsData.filter(item => item.status === "approved").length,
+      rejected: dataPointsData.filter(item => item.status === "rejected").length,
+      changesRequested: dataPointsData.filter(item => item.status === "changes_requested").length
+    };
+    
+    stats.pendingReview = stats.submitted + stats.inReview;
+    stats.processed = stats.approved + stats.rejected;
+    stats.approvalRate = stats.total > 0 ? (stats.approved / stats.total * 100) : 0;
+    
+    return stats;
   },
 async create(dataPointData) {
     await delay(400);
@@ -95,8 +209,11 @@ async create(dataPointData) {
     const newDataPoint = {
       Id: newId,
       submittedAt: new Date().toISOString(),
-      status: "pending",
+      status: "submitted", // Changed default to submitted for approval workflow
       approvedBy: null,
+      approvalWorkflow: "submitted",
+      qualityScore: dataPointData.qualityScore || 85,
+      auditTrail: dataPointData.auditTrail || [],
       ...dataPointData
     };
     dataPointsData.push(newDataPoint);
