@@ -4,9 +4,14 @@ const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 let projects = [...projectsData];
 
 export const projectService = {
-  async getAll() {
+async getAll() {
     await delay(300);
-    return [...projects];
+    // Ensure all projects have required properties
+    const riskLevels = ["low", "medium", "high"];
+    return projects.map(project => ({
+      ...project,
+      riskLevel: project.riskLevel || riskLevels[Math.floor(Math.random() * riskLevels.length)]
+    }));
   },
 
   async getById(id) {
@@ -18,11 +23,13 @@ export const projectService = {
     return { ...project };
   },
 
-  async create(projectData) {
+async create(projectData) {
     await delay(400);
+    const riskLevels = ["low", "medium", "high"];
     const newProject = {
       ...projectData,
       Id: Math.max(...projects.map(p => p.Id), 0) + 1,
+      riskLevel: projectData.riskLevel || riskLevels[Math.floor(Math.random() * riskLevels.length)],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -37,10 +44,11 @@ export const projectService = {
       throw new Error("Project not found");
     }
     
-    projects[index] = {
+projects[index] = {
       ...projects[index],
       ...projectData,
       Id: parseInt(id),
+      riskLevel: projectData.riskLevel || projects[index].riskLevel || "low",
       updatedAt: new Date().toISOString()
     };
     
@@ -66,15 +74,19 @@ export const projectService = {
       throw new Error("Invalid status");
     }
 
-    projects = projects.map(project => {
+projects = projects.map(project => {
       if (projectIds.includes(project.Id)) {
         return {
           ...project,
           status: newStatus,
+          riskLevel: project.riskLevel || "low",
           updatedAt: new Date().toISOString()
         };
       }
-      return project;
+      return {
+        ...project,
+        riskLevel: project.riskLevel || "low"
+      };
     });
 
     return projects.filter(p => projectIds.includes(p.Id));

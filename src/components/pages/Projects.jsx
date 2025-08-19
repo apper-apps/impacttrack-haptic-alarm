@@ -62,29 +62,47 @@ const [projects, setProjects] = useState([]);
 
   // Enhanced projects data with country information
 const enhancedProjects = projects.map(project => {
+    // Safe property access with defaults
     const country = countries.find(c => c.Id === project.countryId);
-    const progressPercentage = Math.round((project.currentReach / project.targetReach) * 100);
+    const currentReach = project.currentReach || 0;
+    const targetReach = project.targetReach || 1;
+    const progressPercentage = Math.round((currentReach / targetReach) * 100);
     
-    // Calculate timeline progress
-    const startDate = new Date(project.startDate);
-    const endDate = new Date(project.endDate);
-    const today = new Date();
-    const totalDuration = endDate - startDate;
-    const elapsed = today - startDate;
-    const timelineProgress = Math.max(0, Math.min(100, Math.round((elapsed / totalDuration) * 100)));
+    // Calculate timeline progress with safety checks
+    let timelineProgress = 0;
+    try {
+      const startDate = new Date(project.startDate);
+      const endDate = new Date(project.endDate);
+      const today = new Date();
+      
+      if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+        const totalDuration = endDate - startDate;
+        const elapsed = today - startDate;
+        if (totalDuration > 0) {
+          timelineProgress = Math.max(0, Math.min(100, Math.round((elapsed / totalDuration) * 100)));
+        }
+      }
+    } catch (error) {
+      console.warn('Timeline calculation error for project:', project.Id);
+      timelineProgress = 0;
+    }
     
-    // Determine project health status
+    // Determine project health status with safe property access
+    const riskLevel = project.riskLevel || "low"; // Default to low risk if missing
+    const status = project.status || "active"; // Default status
+    
     let healthStatus = "on-track"; // Green
-    if (project.status === "inactive" || project.status === "cancelled") {
+    if (status === "inactive" || status === "cancelled") {
       healthStatus = "inactive"; // Grey
-    } else if (project.riskLevel === "high" || progressPercentage < timelineProgress - 20) {
+    } else if (riskLevel === "high" || progressPercentage < timelineProgress - 20) {
       healthStatus = "critical"; // Red
-    } else if (project.riskLevel === "medium" || progressPercentage < timelineProgress - 10) {
+    } else if (riskLevel === "medium" || progressPercentage < timelineProgress - 10) {
       healthStatus = "attention"; // Yellow
     }
     
     return {
       ...project,
+      riskLevel, // Ensure riskLevel is always present
       countryName: country?.name || "Unknown",
       countryCode: country?.code || "XX",
       progressPercentage,
@@ -210,29 +228,35 @@ render: (value, row) => (
     {
       key: "timelineProgress",
       label: "Timeline Progress",
-render: (value, row) => (
-        <div className="w-24">
-          <div className="flex justify-between text-xs text-gray-600 mb-1">
-            <span>{value || 0}%</span>
-            <span>{row?.progressPercentage || 0}%</span>
+render: (value, row) => {
+        // Safe value extraction with defaults
+        const timelineProgress = Math.max(0, Math.min(100, value || 0));
+        const projectProgress = Math.max(0, Math.min(100, row?.progressPercentage || 0));
+        
+        return (
+          <div className="w-24">
+            <div className="flex justify-between text-xs text-gray-600 mb-1">
+              <span>{timelineProgress}%</span>
+              <span>{projectProgress}%</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2 relative">
+              <div
+                className="absolute top-0 left-0 h-2 bg-gray-300 rounded-full"
+                style={{ width: `${timelineProgress}%` }}
+              ></div>
+              <div
+                className={`absolute top-0 left-0 h-2 rounded-full ${
+                  projectProgress >= timelineProgress ? "bg-success" : "bg-warning"
+                }`}
+                style={{ width: `${projectProgress}%` }}
+              ></div>
+            </div>
+            <div className="text-xs text-gray-500 mt-1">
+              Time vs Progress
+            </div>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2 relative">
-            <div
-              className="absolute top-0 left-0 h-2 bg-gray-300 rounded-full"
-              style={{ width: `${Math.min(value || 0, 100)}%` }}
-            ></div>
-            <div
-              className={`absolute top-0 left-0 h-2 rounded-full ${
-                (row?.progressPercentage || 0) >= (value || 0) ? "bg-success" : "bg-warning"
-              }`}
-              style={{ width: `${Math.min(row?.progressPercentage || 0, 100)}%` }}
-            ></div>
-          </div>
-          <div className="text-xs text-gray-500 mt-1">
-            Time vs Progress
-          </div>
-        </div>
-      )
+        );
+      }
     },
     {
       key: "riskLevel",
