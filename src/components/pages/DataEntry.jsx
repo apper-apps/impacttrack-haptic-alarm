@@ -7,6 +7,7 @@ import { countryService } from "@/services/api/countryService";
 import { projectService } from "@/services/api/projectService";
 import { indicatorService } from "@/services/api/indicatorService";
 import { dataPointService } from "@/services/api/dataPointService";
+import { bulkImportService } from "@/services/api/bulkImportService";
 import ApperIcon from "@/components/ApperIcon";
 import Error from "@/components/ui/Error";
 import Loading from "@/components/ui/Loading";
@@ -705,8 +706,51 @@ validEntries.forEach((entry, index) => {
   
   // Manual save function
   const handleManualSave = async () => {
-    await saveDraft();
+await saveDraft();
     toast.success("Draft saved successfully");
+  };
+
+  const downloadTemplate = () => {
+    try {
+      const selectedCountryName = countries.find(c => c.Id === parseInt(selectedCountry))?.name || "Sample Country";
+      const selectedProjectName = projects.find(p => p.Id === parseInt(selectedProject))?.name || "Sample Project";
+      
+      // Generate sample data based on current indicators
+      const sampleData = indicators.slice(0, 5).map((indicator, index) => ({
+        Country: selectedCountryName,
+        Project: selectedProjectName,
+        Indicator: indicator.name,
+        Period: selectedPeriod,
+        Value: indicator.dataType === 'percentage' ? '75' : 
+               indicator.dataType === 'currency' ? '10000' : '100',
+        Unit: indicator.unit || '',
+        Notes: 'Sample notes for data entry',
+        DataSource: 'Survey',
+        CollectionMethod: 'Direct measurement'
+      }));
+
+      // Add a few more sample rows with different periods
+      const additionalSample = {
+        Country: selectedCountryName,
+        Project: selectedProjectName,
+        Indicator: 'Sample Indicator',
+        Period: '2024-01',
+        Value: '50',
+        Unit: 'units',
+        Notes: 'Add your notes here',
+        DataSource: 'Administrative records',
+        CollectionMethod: 'Secondary data'
+      };
+
+      sampleData.push(additionalSample);
+
+      const filename = `data-entry-template-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+      bulkImportService.downloadTemplate(sampleData, filename);
+      toast.success("Template downloaded successfully");
+    } catch (error) {
+      console.error('Error downloading template:', error);
+      toast.error("Failed to download template");
+    }
   };
 
   const formatValue = (value, type, unit) => {
@@ -825,7 +869,7 @@ validEntries.forEach((entry, index) => {
             <ApperIcon name="Save" size={16} className="mr-2" />
             Save Draft
           </Button>
-          <Button variant="outline" size="sm">
+<Button variant="outline" size="sm" onClick={downloadTemplate}>
             <ApperIcon name="Download" size={16} className="mr-2" />
             Template
           </Button>
