@@ -218,7 +218,7 @@ function Countries() {
       </div>
 
       {/* Filter Controls */}
-      <div className="flex flex-col sm:flex-row gap-4 bg-white rounded-lg p-4 shadow-sm">
+<div className="flex flex-col sm:flex-row gap-4 bg-white rounded-lg p-4 shadow-sm">
         <div className="flex-1">
           <SearchBar
             placeholder="Search countries..."
@@ -229,16 +229,17 @@ function Countries() {
         <div className="w-full sm:w-48">
           <Select
             value={statusFilter}
-            onValueChange={setStatusFilter}
-          >
-            <option value="All">All Status</option>
-            <option value="On Track">On Track</option>
-            <option value="Needs Attention">Needs Attention</option>
-            <option value="Critical">Critical</option>
-          </Select>
+            onChange={(e) => setStatusFilter(e.target.value)}
+            options={[
+              { value: "All", label: "All Status" },
+              { value: "On Track", label: "On Track" },
+              { value: "Needs Attention", label: "Needs Attention" },
+              { value: "Critical", label: "Critical" }
+            ]}
+            placeholder="Filter by status..."
+          />
         </div>
       </div>
-
       {/* Status Summary */}
       {aggregateStats.needsAttentionCount > 0 || aggregateStats.criticalCount > 0 ? (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">

@@ -26,7 +26,7 @@ const CountrySelector = () => {
     <div className="flex items-center space-x-2">
       <ApperIcon name="Globe" size={16} className="text-gray-600" />
       <Select
-        options={countries}
+options={countries}
         value={selectedCountry || ""}
         onChange={(e) => dispatch(setSelectedCountry(e.target.value || null))}
         placeholder="Select country..."
