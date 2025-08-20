@@ -375,9 +375,10 @@ function ProjectDetail() {
 
       {/* Tabs */}
       <div className="border-b border-gray-200">
-        <nav className="flex space-x-8">
+<nav className="flex space-x-8">
           {[
             { id: 'overview', label: 'Overview', icon: 'Home' },
+            { id: 'budget', label: 'Budget Utilization', icon: 'PieChart' },
             { id: 'data', label: 'Data Points', icon: 'BarChart3' },
             { id: 'team', label: 'Team', icon: 'Users' },
             { id: 'activity', label: 'Activity', icon: 'Activity' }
@@ -505,6 +506,167 @@ function ProjectDetail() {
           </div>
         </div>
       )}
+{activeTab === 'budget' && (
+        <div className="space-y-6">
+          {/* Budget Overview Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <StatsCard
+              title="Total Budget"
+              value={formatCurrency(project.totalBudget)}
+              icon="DollarSign"
+              color="info"
+            />
+            <StatsCard
+              title="Amount Spent"
+              value={formatCurrency(project.spentBudget)}
+              icon="TrendingDown"
+              color="warning"
+            />
+            <StatsCard
+              title="Remaining"
+              value={formatCurrency(project.totalBudget - project.spentBudget)}
+              icon="Wallet"
+              color="success"
+            />
+            <StatsCard
+              title="Utilization Rate"
+              value={`${calculateBudgetUtilization()}%`}
+              change={calculateBudgetUtilization() > 80 ? -5 : 8}
+              icon="Percent"
+              color={calculateBudgetUtilization() > 80 ? "error" : "primary"}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Budget Utilization Chart */}
+            <div className="space-y-6">
+              {budgetChartData && (
+                <ChartCard
+                  title="Budget Utilization"
+                  subtitle="Overall spending breakdown"
+                  type="donut"
+                  data={budgetChartData}
+                />
+              )}
+              
+              {/* Budget Health Indicator */}
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold mb-4">Budget Health</h3>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Overall Status</span>
+                    <Badge className={calculateBudgetUtilization() > 90 ? 'bg-error text-white' : calculateBudgetUtilization() > 75 ? 'bg-warning text-white' : 'bg-success text-white'}>
+                      {calculateBudgetUtilization() > 90 ? 'Over Budget Risk' : calculateBudgetUtilization() > 75 ? 'Monitor Closely' : 'On Track'}
+                    </Badge>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className={`h-2 rounded-full ${calculateBudgetUtilization() > 90 ? 'bg-error' : calculateBudgetUtilization() > 75 ? 'bg-warning' : 'bg-success'}`}
+                      style={{ width: `${Math.min(calculateBudgetUtilization(), 100)}%` }}
+                    ></div>
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    {calculateBudgetUtilization() > 90 ? 'Budget utilization is critical. Immediate attention required.' : 
+                     calculateBudgetUtilization() > 75 ? 'Budget utilization is high. Monitor remaining spending carefully.' : 
+                     'Budget utilization is within healthy limits.'}
+                  </div>
+                </div>
+              </Card>
+            </div>
+
+            {/* Category Breakdown */}
+            <div className="space-y-6">
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold mb-4">Budget by Category</h3>
+                <div className="space-y-4">
+                  {project.budgetCategories && Object.entries(project.budgetCategories).map(([category, budget]) => {
+                    const utilizationRate = Math.round((budget.spent / budget.allocated) * 100);
+                    return (
+                      <div key={category} className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium capitalize">{category}</span>
+                          <div className="text-right">
+                            <div className="text-sm font-semibold">{formatCurrency(budget.spent)} / {formatCurrency(budget.allocated)}</div>
+                            <div className="text-xs text-gray-500">{utilizationRate}% used</div>
+                          </div>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div 
+                            className={`h-2 rounded-full ${utilizationRate > 90 ? 'bg-error' : utilizationRate > 75 ? 'bg-warning' : 'bg-primary'}`}
+                            style={{ width: `${Math.min(utilizationRate, 100)}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Card>
+
+              {/* Spending Trend */}
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold mb-4">Monthly Spending Trend</h3>
+                <ChartCard
+                  title=""
+                  type="line"
+                  data={{
+                    series: [{
+                      name: 'Monthly Spending',
+                      data: [180000, 220000, 195000, 240000, 285000, 315000]
+                    }],
+                    options: {
+                      chart: { type: 'line', height: 200, toolbar: { show: false } },
+                      xaxis: {
+                        categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
+                      },
+                      colors: ['#667eea'],
+                      stroke: { width: 3 },
+                      markers: { size: 4 },
+                      grid: { show: true, strokeDashArray: 3 }
+                    }
+                  }}
+                />
+              </Card>
+            </div>
+          </div>
+
+          {/* Budget Alerts */}
+          <Card className="p-6">
+            <h3 className="text-lg font-semibold mb-4">Budget Alerts & Recommendations</h3>
+            <div className="space-y-3">
+              {calculateBudgetUtilization() > 85 && (
+                <div className="flex items-start space-x-3 p-3 bg-error/10 rounded-lg border border-error/20">
+                  <ApperIcon name="AlertTriangle" size={20} className="text-error mt-0.5" />
+                  <div>
+                    <div className="font-medium text-error">High Budget Utilization</div>
+                    <div className="text-sm text-gray-600">Budget utilization is at {calculateBudgetUtilization()}%. Consider reviewing remaining activities and costs.</div>
+                  </div>
+                </div>
+              )}
+              
+              {project.budgetCategories && Object.entries(project.budgetCategories).some(([_, budget]) => (budget.spent / budget.allocated) > 0.9) && (
+                <div className="flex items-start space-x-3 p-3 bg-warning/10 rounded-lg border border-warning/20">
+                  <ApperIcon name="AlertCircle" size={20} className="text-warning mt-0.5" />
+                  <div>
+                    <div className="font-medium text-warning">Category Over-spending</div>
+                    <div className="text-sm text-gray-600">Some budget categories are approaching their limits. Review category allocations.</div>
+                  </div>
+                </div>
+              )}
+              
+              {calculateBudgetUtilization() < 50 && (
+                <div className="flex items-start space-x-3 p-3 bg-info/10 rounded-lg border border-info/20">
+                  <ApperIcon name="Info" size={20} className="text-info mt-0.5" />
+                  <div>
+                    <div className="font-medium text-info">Low Budget Utilization</div>
+                    <div className="text-sm text-gray-600">Budget utilization is at {calculateBudgetUtilization()}%. Consider accelerating planned activities.</div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </Card>
+        </div>
+      )}
+
       {activeTab === 'data' && (
         <Card className="p-6">
           <div className="flex items-center justify-between mb-6">
