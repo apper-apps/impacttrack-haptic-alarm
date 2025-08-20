@@ -32,9 +32,10 @@ const NotificationCenter = () => {
     low: 'bg-green-100 text-green-800 border-green-200'
   };
 
-  const typeIcons = {
+const typeIcons = {
     approval: 'CheckCircle',
-    threshold: 'AlertTriangle'
+    threshold: 'AlertTriangle',
+    change_request: 'MessageSquare'
   };
 
   const formatDate = (dateString) => {
@@ -90,11 +91,14 @@ const getFilteredNotifications = () => {
       case 'unread':
         filtered = filtered.filter(n => !n.isRead);
         break;
-      case 'approval':
+case 'approval':
         filtered = filtered.filter(n => n.type === 'approval');
         break;
       case 'threshold':
         filtered = filtered.filter(n => n.type === 'threshold');
+        break;
+      case 'change_request':
+        filtered = filtered.filter(n => n.type === 'change_request');
         break;
       case 'actionRequired':
         filtered = filtered.filter(n => n.actionRequired);
@@ -262,7 +266,7 @@ const getFilteredNotifications = () => {
                       </div>
                     </div>
 
-                    {/* Metadata */}
+{/* Metadata */}
                     {notification.metadata && (
                       <div className="text-xs text-gray-500 mb-3 p-2 bg-gray-50 rounded">
                         {notification.type === 'approval' && notification.metadata.amount && (
@@ -275,6 +279,18 @@ const getFilteredNotifications = () => {
                             / Target: {notification.metadata.threshold}
                             {notification.metadata.unit}
                           </span>
+                        )}
+                        {notification.type === 'change_request' && notification.metadata.indicator && (
+                          <div className="space-y-1">
+                            <span className="block">Indicator: {notification.metadata.indicator}</span>
+                            <span className="block">Requested by: {notification.metadata.requestedBy}</span>
+                            {notification.metadata.country && (
+                              <span className="block">Country: {notification.metadata.country}</span>
+                            )}
+                            {notification.metadata.period && (
+                              <span className="block">Period: {notification.metadata.period}</span>
+                            )}
+                          </div>
                         )}
                       </div>
                     )}

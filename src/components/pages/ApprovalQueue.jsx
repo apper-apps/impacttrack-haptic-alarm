@@ -15,6 +15,7 @@ import Card from "@/components/atoms/Card";
 import Select from "@/components/atoms/Select";
 import { 
   addAuditTrailEntry, 
+  addNotification,
   refreshDashboardData, 
   removeFromApprovalQueue, 
   setApprovalQueueError, 
@@ -296,6 +297,26 @@ try {
         action: String('changes_requested'),
         user: String(currentUser.name || ''),
         comment: String(changeRequests)
+}));
+
+      // Create notification for change request
+      dispatch(addNotification({
+        type: 'change_request',
+        title: 'Changes Requested',
+        message: `Changes have been requested for ${item.indicator || 'data entry'}: "${changeRequests}"`,
+        priority: 'medium',
+        entityId: item.Id,
+        entityType: 'datapoint',
+        actionRequired: true,
+        metadata: {
+          dataPointId: item.Id,
+          indicator: item.indicator,
+          requestedBy: currentUser.name,
+          feedback: changeRequests,
+          originalValue: item.value,
+          country: item.country,
+          period: item.period
+        }
       }));
 
       toast.success("Change requests sent to submitter");

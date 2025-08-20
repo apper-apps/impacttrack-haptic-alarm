@@ -127,8 +127,18 @@ reducers: {
         state.notifications.unreadCount = state.notifications.items.filter(n => !n.isRead).length;
       }
     },
-    removeNotification: (state, action) => {
+removeNotification: (state, action) => {
       state.notifications.items = state.notifications.items.filter(n => n.Id !== action.payload);
+      state.notifications.unreadCount = state.notifications.items.filter(n => !n.isRead).length;
+    },
+    addNotification: (state, action) => {
+      const newNotification = {
+        ...action.payload,
+        Id: Math.max(0, ...state.notifications.items.map(n => n.Id)) + 1,
+        isRead: false,
+        createdAt: new Date().toISOString()
+      };
+      state.notifications.items.unshift(newNotification);
       state.notifications.unreadCount = state.notifications.items.filter(n => !n.isRead).length;
     },
     setBulkImportLoading: (state, action) => {
@@ -362,11 +372,12 @@ export const {
   setSelectedProject, 
   toggleSidebar, 
   setSidebarOpen,
-  setNotificationsLoading,
+setNotificationsLoading,
   setNotifications,
   setNotificationsError,
   updateNotification,
   removeNotification,
+  addNotification,
   setBulkImportLoading,
   setBulkImportProgress,
   setBulkImportError,
