@@ -193,12 +193,13 @@ updateDashboardMetrics: (state, action) => {
 setApprovalStatus: (state, action) => {
       const { dataPointId, status, approvedBy, feedback, approvedAt, rejectedAt } = action.payload;
       
-      // Ensure all values are serializable with defensive programming
-      const serializedStatus = typeof status === 'string' ? status : String(status || '');
-      const serializedApprovedBy = approvedBy ? String(approvedBy) : null;
-      const serializedFeedback = feedback ? String(feedback) : null;
+      // Ensure ALL values are properly serializable with enhanced validation
+      const serializedStatus = status != null ? String(status) : 'draft';
+      const serializedApprovedBy = approvedBy != null ? String(approvedBy) : null;
+      const serializedFeedback = feedback != null ? String(feedback) : null;
+      const serializedDataPointId = dataPointId != null ? String(dataPointId) : null;
       
-      // Handle dates properly - ensure they're always ISO strings or null
+      // Handle dates with strict serialization - always ISO strings or null
       const serializedApprovedAt = approvedAt 
         ? (typeof approvedAt === 'string' ? approvedAt : new Date(approvedAt).toISOString())
         : (serializedStatus === 'approved' ? new Date().toISOString() : null);
@@ -207,17 +208,20 @@ setApprovalStatus: (state, action) => {
         ? (typeof rejectedAt === 'string' ? rejectedAt : new Date(rejectedAt).toISOString()) 
         : (serializedStatus === 'rejected' ? new Date().toISOString() : null);
       
-      state.approvals = {
-        ...state.approvals,
-        [String(dataPointId)]: {
-          status: serializedStatus,
-          approvedBy: serializedApprovedBy,
-          approvedAt: serializedApprovedAt,
-          rejectedAt: serializedRejectedAt,
-          feedback: serializedFeedback,
-          workflowStage: serializedStatus
-        }
-      };
+      // Only proceed if we have a valid dataPointId
+      if (serializedDataPointId) {
+        state.approvals = {
+          ...state.approvals,
+          [serializedDataPointId]: {
+            status: serializedStatus,
+            approvedBy: serializedApprovedBy,
+            approvedAt: serializedApprovedAt,
+            rejectedAt: serializedRejectedAt,
+            feedback: serializedFeedback,
+            workflowStage: serializedStatus
+          }
+        };
+      }
     },
     // Approval Queue Management
     addToApprovalQueue: (state, action) => {

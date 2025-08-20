@@ -4,6 +4,15 @@ import { toast } from "react-toastify";
 import { format, parseISO } from "date-fns";
 import { dataPointService } from "@/services/api/dataPointService";
 import { indicatorService } from "@/services/api/indicatorService";
+import ApperIcon from "@/components/ApperIcon";
+import Error from "@/components/ui/Error";
+import Loading from "@/components/ui/Loading";
+import DataTable from "@/components/molecules/DataTable";
+import Input from "@/components/atoms/Input";
+import Button from "@/components/atoms/Button";
+import Badge from "@/components/atoms/Badge";
+import Card from "@/components/atoms/Card";
+import Select from "@/components/atoms/Select";
 import { 
   addAuditTrailEntry, 
   refreshDashboardData, 
@@ -13,18 +22,10 @@ import {
   setApprovalQueueItems, 
   setApprovalQueueLoading, 
   setApprovalQueueSort, 
+  setApprovalStatus,
   updateApprovalQueueItem, 
   updateDashboardMetrics 
 } from "@/store/melSlice";
-import ApperIcon from "@/components/ApperIcon";
-import Error from "@/components/ui/Error";
-import Loading from "@/components/ui/Loading";
-import DataTable from "@/components/molecules/DataTable";
-import Button from "@/components/atoms/Button";
-import Card from "@/components/atoms/Card";
-import Badge from "@/components/atoms/Badge";
-import Input from "@/components/atoms/Input";
-import Select from "@/components/atoms/Select";
 
 const ApprovalQueue = () => {
   const dispatch = useDispatch();
@@ -160,8 +161,18 @@ const handleApprove = async (item, approvalFeedback = '') => {
       };
 
       dispatch(updateApprovalQueueItem({
-        id: item.id,
+        id: String(item.id),
         updates: serializedUpdates
+      }));
+
+      // Dispatch setApprovalStatus with serialized values
+      dispatch(setApprovalStatus({
+        dataPointId: String(item.Id),
+        status: String('approved'),
+        approvedBy: String(currentUser.name || ''),
+        feedback: approvalFeedback ? String(approvalFeedback) : null,
+        approvedAt: new Date().toISOString(),
+        rejectedAt: null
       }));
 
       dispatch(addAuditTrailEntry({
@@ -213,8 +224,18 @@ try {
       };
 
       dispatch(updateApprovalQueueItem({
-        id: item.id,
+        id: String(item.id),
         updates: serializedUpdates
+      }));
+
+      // Dispatch setApprovalStatus with serialized values
+      dispatch(setApprovalStatus({
+        dataPointId: String(item.Id),
+        status: String('rejected'),
+        approvedBy: null,
+        feedback: String(rejectionReason),
+        approvedAt: null,
+        rejectedAt: new Date().toISOString()
       }));
 
       dispatch(addAuditTrailEntry({
@@ -227,7 +248,7 @@ try {
           value: Number(item.value) || 0,
           qualityScore: Number(item.qualityScore) || 0
         }
-}));
+      }));
       toast.success("Data rejected and feedback sent to submitter");
       
       setTimeout(() => {
@@ -256,8 +277,18 @@ try {
       };
 
       dispatch(updateApprovalQueueItem({
-        id: item.id,
+        id: String(item.id),
         updates: serializedUpdates
+      }));
+
+      // Dispatch setApprovalStatus with serialized values
+      dispatch(setApprovalStatus({
+        dataPointId: String(item.Id),
+        status: String('changes_requested'),
+        approvedBy: null,
+        feedback: String(changeRequests),
+        approvedAt: null,
+        rejectedAt: null
       }));
 
       dispatch(addAuditTrailEntry({

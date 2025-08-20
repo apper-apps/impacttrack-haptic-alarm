@@ -603,23 +603,23 @@ const handleSubmit = async (e) => {
 
       const createdDataPoints = await Promise.all(promises);
       
-      // Add to approval queue in Redux
+// Add to approval queue in Redux with serialized values
       validEntries.forEach((entry, index) => {
         const dataPoint = createdDataPoints[index];
         dispatch(addToApprovalQueue({
-          dataPointId: dataPoint.Id,
-          indicatorId: entry.indicatorId,
-          indicatorName: entry.indicatorName,
-          projectId: parseInt(selectedProject),
-          countryId: selectedCountry?.Id,
-          value: parseFloat(entry.value),
-          submittedBy: currentUser.name,
+          dataPointId: String(dataPoint.Id),
+          indicatorId: String(entry.indicatorId),
+          indicatorName: String(entry.indicatorName),
+          projectId: Number(selectedProject),
+          countryId: selectedCountry?.Id ? Number(selectedCountry.Id) : null,
+          value: Number(entry.value),
+          submittedBy: String(currentUser.name || ''),
           submittedAt: new Date().toISOString(),
-          priority: entry.isRequired ? "high" : "medium",
-          qualityScore: qualityScoresTemp[entry.indicatorId] || 85,
-          previousValue: previousPeriodData[entry.indicatorId]?.value || null,
+          priority: String(entry.isRequired ? "high" : "medium"),
+          qualityScore: Number(qualityScoresTemp[entry.indicatorId] || 85),
+          previousValue: previousPeriodData[entry.indicatorId]?.value ? Number(previousPeriodData[entry.indicatorId].value) : null,
           variance: previousPeriodData[entry.indicatorId]?.value 
-            ? ((parseFloat(entry.value) - previousPeriodData[entry.indicatorId].value) / previousPeriodData[entry.indicatorId].value * 100)
+            ? Number(((parseFloat(entry.value) - previousPeriodData[entry.indicatorId].value) / previousPeriodData[entry.indicatorId].value * 100))
             : null
         }));
       });
@@ -627,18 +627,27 @@ const handleSubmit = async (e) => {
       // Update submission statuses and approval workflow
       const newSubmissionStatuses = { ...submissionStatuses };
       const newApprovalWorkflow = { ...approvalWorkflow };
-      
-      validEntries.forEach((entry, index) => {
+validEntries.forEach((entry, index) => {
         const dataPointId = createdDataPoints[index].Id;
-        newSubmissionStatuses[entry.indicatorId] = "submitted";
+        newSubmissionStatuses[entry.indicatorId] = String("submitted");
         newApprovalWorkflow[entry.indicatorId] = {
-          stage: "submitted",
+          stage: String("submitted"),
           submittedAt: new Date().toISOString(),
           reviewedAt: null,
           approvedAt: null,
           feedback: null,
-          dataPointId: dataPointId
+          dataPointId: String(dataPointId)
         };
+        
+        // Dispatch approval status with properly serialized values
+        dispatch(setApprovalStatus({
+          dataPointId: String(dataPointId),
+          status: String("submitted"),
+          approvedBy: null,
+          feedback: null,
+          approvedAt: null,
+          rejectedAt: null
+        }));
       });
       
       setSubmissionStatuses(newSubmissionStatuses);
