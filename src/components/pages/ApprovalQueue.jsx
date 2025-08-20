@@ -512,10 +512,9 @@ dispatch(updateApprovalQueueItem({
               { value: "low", label: "Low Priority" }
             ]}
           />
-
 <Select
             value={filters.dateRange}
-            onChange={(value) => dispatch(setApprovalQueueFilters({ dateRange: value }))}
+            onChange={(e) => dispatch(setApprovalQueueFilters({ dateRange: e.target.value }))}
             options={[
               { value: "all", label: "All Time" },
               { value: "today", label: "Today" },
