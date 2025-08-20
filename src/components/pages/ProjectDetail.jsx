@@ -1,20 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
-import { projectService } from '@/services/api/projectService';
-import { dataPointService } from '@/services/api/dataPointService';
-import { countryService } from '@/services/api/countryService';
-import ApperIcon from '@/components/ApperIcon';
-import Loading from '@/components/ui/Loading';
-import Error from '@/components/ui/Error';
-import StatsCard from '@/components/molecules/StatsCard';
-import ChartCard from '@/components/molecules/ChartCard';
-import DataTable from '@/components/molecules/DataTable';
-import Card from '@/components/atoms/Card';
-import Button from '@/components/atoms/Button';
-import Badge from '@/components/atoms/Badge';
-import Select from '@/components/atoms/Select';
-import Input from '@/components/atoms/Input';
+import React, { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { toast } from "react-toastify";
+import { projectService } from "@/services/api/projectService";
+import { dataPointService } from "@/services/api/dataPointService";
+import { countryService } from "@/services/api/countryService";
+import ApperIcon from "@/components/ApperIcon";
+import Projects from "@/components/pages/Projects";
+import Error from "@/components/ui/Error";
+import Loading from "@/components/ui/Loading";
+import DataTable from "@/components/molecules/DataTable";
+import ChartCard from "@/components/molecules/ChartCard";
+import StatsCard from "@/components/molecules/StatsCard";
+import Button from "@/components/atoms/Button";
+import Card from "@/components/atoms/Card";
+import Badge from "@/components/atoms/Badge";
+import Input from "@/components/atoms/Input";
+import Select from "@/components/atoms/Select";
 
 function ProjectDetail() {
   const { id } = useParams();
@@ -247,17 +248,19 @@ function ProjectDetail() {
       markers: { size: 6 }
     }
   };
-
-  const budgetChartData = {
-    series: [project?.spentBudget || 0, (project?.totalBudget || 0) - (project?.spentBudget || 0)],
+// Ensure budget chart data is valid before rendering
+  const budgetChartData = project && project.totalBudget ? {
+    series: [
+      Number(project.spentBudget) || 0, 
+      Math.max(0, (Number(project.totalBudget) || 0) - (Number(project.spentBudget) || 0))
+    ],
     options: {
       chart: { type: 'donut', height: 300 },
       labels: ['Spent', 'Remaining'],
       colors: ['#667eea', '#e5e7eb'],
       legend: { position: 'bottom' }
     }
-  };
-
+  } : null;
   if (loading) {
     return <Loading />;
   }
@@ -486,17 +489,22 @@ function ProjectDetail() {
               type="line"
               data={chartData}
             />
-            
-            <ChartCard
-              title="Budget Utilization"
-              subtitle="Spent vs Remaining Budget"
-              type="donut"
-              data={budgetChartData}
-            />
+{budgetChartData ? (
+              <ChartCard
+                title="Budget Utilization"
+                subtitle="Spent vs Remaining Budget"
+                type="donut"
+                data={budgetChartData}
+              />
+            ) : (
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold mb-2">Budget Utilization</h3>
+<p className="text-gray-500">Budget data not available</p>
+              </Card>
+            )}
           </div>
         </div>
       )}
-
       {activeTab === 'data' && (
         <Card className="p-6">
           <div className="flex items-center justify-between mb-6">
