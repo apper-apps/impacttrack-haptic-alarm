@@ -83,9 +83,9 @@
     "value": 15600,
     "period": "2024-Q1",
     "submittedBy": "Country Manager - Philippines",
-    "submittedAt": "2024-03-30T09:45:00Z",
+"submittedAt": "2024-03-30T09:45:00Z",
     "approvedBy": null,
-    "status": "pending"
+    "status": "submitted"
   },
   {
     "Id": 9,
@@ -93,10 +93,10 @@
     "projectId": 4,
     "value": 13728,
     "period": "2024-Q1",
-    "submittedBy": "Country Manager - Philippines",
+"submittedBy": "Country Manager - Philippines",
     "submittedAt": "2024-03-30T09:45:00Z",
     "approvedBy": null,
-    "status": "pending"
+    "status": "submitted"
   },
   {
     "Id": 10,
@@ -104,10 +104,10 @@
     "projectId": 4,
     "value": 425,
     "period": "2024-Q1",
-    "submittedBy": "Country Manager - Philippines",
+"submittedBy": "Country Manager - Philippines",
     "submittedAt": "2024-03-30T09:45:00Z",
     "approvedBy": null,
-    "status": "pending"
+    "status": "submitted"
   },
   {
     "Id": 11,
