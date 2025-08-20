@@ -193,18 +193,27 @@ updateDashboardMetrics: (state, action) => {
 setApprovalStatus: (state, action) => {
       const { dataPointId, status, approvedBy, feedback, approvedAt, rejectedAt } = action.payload;
       
-      // Ensure all values are serializable
-      const serializedStatus = typeof status === 'string' ? status : String(status);
+      // Ensure all values are serializable with defensive programming
+      const serializedStatus = typeof status === 'string' ? status : String(status || '');
       const serializedApprovedBy = approvedBy ? String(approvedBy) : null;
       const serializedFeedback = feedback ? String(feedback) : null;
       
+      // Handle dates properly - ensure they're always ISO strings or null
+      const serializedApprovedAt = approvedAt 
+        ? (typeof approvedAt === 'string' ? approvedAt : new Date(approvedAt).toISOString())
+        : (serializedStatus === 'approved' ? new Date().toISOString() : null);
+        
+      const serializedRejectedAt = rejectedAt
+        ? (typeof rejectedAt === 'string' ? rejectedAt : new Date(rejectedAt).toISOString()) 
+        : (serializedStatus === 'rejected' ? new Date().toISOString() : null);
+      
       state.approvals = {
         ...state.approvals,
-        [dataPointId]: {
+        [String(dataPointId)]: {
           status: serializedStatus,
           approvedBy: serializedApprovedBy,
-          approvedAt: approvedAt || (serializedStatus === 'approved' ? new Date().toISOString() : null),
-          rejectedAt: rejectedAt || (serializedStatus === 'rejected' ? new Date().toISOString() : null),
+          approvedAt: serializedApprovedAt,
+          rejectedAt: serializedRejectedAt,
           feedback: serializedFeedback,
           workflowStage: serializedStatus
         }

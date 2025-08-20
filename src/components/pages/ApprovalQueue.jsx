@@ -1,30 +1,30 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { toast } from 'react-toastify';
-import { format, parseISO } from 'date-fns';
-import { dataPointService } from '@/services/api/dataPointService';
-import { indicatorService } from '@/services/api/indicatorService';
-import ApperIcon from '@/components/ApperIcon';
-import Card from '@/components/atoms/Card';
-import Button from '@/components/atoms/Button';
-import Badge from '@/components/atoms/Badge';
-import Input from '@/components/atoms/Input';
-import Select from '@/components/atoms/Select';
-import DataTable from '@/components/molecules/DataTable';
-import Loading from '@/components/ui/Loading';
-import Error from '@/components/ui/Error';
-import {
-  setApprovalQueueItems,
-  setApprovalQueueLoading,
-  setApprovalQueueError,
-  setApprovalQueueFilters,
-  setApprovalQueueSort,
-  updateApprovalQueueItem,
-  removeFromApprovalQueue,
-  addAuditTrailEntry,
-  updateDashboardMetrics,
-  refreshDashboardData
-} from '@/store/melSlice';
+import React, { useEffect, useMemo, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { toast } from "react-toastify";
+import { format, parseISO } from "date-fns";
+import { dataPointService } from "@/services/api/dataPointService";
+import { indicatorService } from "@/services/api/indicatorService";
+import { 
+  addAuditTrailEntry, 
+  refreshDashboardData, 
+  removeFromApprovalQueue, 
+  setApprovalQueueError, 
+  setApprovalQueueFilters, 
+  setApprovalQueueItems, 
+  setApprovalQueueLoading, 
+  setApprovalQueueSort, 
+  updateApprovalQueueItem, 
+  updateDashboardMetrics 
+} from "@/store/melSlice";
+import ApperIcon from "@/components/ApperIcon";
+import Error from "@/components/ui/Error";
+import Loading from "@/components/ui/Loading";
+import DataTable from "@/components/molecules/DataTable";
+import Button from "@/components/atoms/Button";
+import Card from "@/components/atoms/Card";
+import Badge from "@/components/atoms/Badge";
+import Input from "@/components/atoms/Input";
+import Select from "@/components/atoms/Select";
 
 const ApprovalQueue = () => {
   const dispatch = useDispatch();
@@ -147,27 +147,31 @@ const ApprovalQueue = () => {
     setReviewModalOpen(true);
   };
 
-  const handleApprove = async (item, approvalFeedback = '') => {
+const handleApprove = async (item, approvalFeedback = '') => {
     try {
       await dataPointService.approve(item.Id, currentUser.name, approvalFeedback);
       
-dispatch(updateApprovalQueueItem({
+      // Ensure all values are serializable before dispatch
+      const serializedUpdates = {
+        status: String('approved'),
+        approvedBy: String(currentUser.name || ''),
+        approvedAt: new Date().toISOString(),
+        feedback: approvalFeedback ? String(approvalFeedback) : null
+      };
+
+      dispatch(updateApprovalQueueItem({
         id: item.id,
-        updates: {
-          status: 'approved',
-          approvedBy: String(currentUser.name),
-          approvedAt: new Date().toISOString(),
-          feedback: approvalFeedback ? String(approvalFeedback) : null
-        }
+        updates: serializedUpdates
       }));
 
       dispatch(addAuditTrailEntry({
-        dataPointId: item.Id,
-        action: 'approved',
-        user: currentUser.name,
-        comment: approvalFeedback || 'Data approved for dashboard integration'
+        dataPointId: String(item.Id),
+        action: String('approved'),
+        user: String(currentUser.name || ''),
+        comment: String(approvalFeedback || 'Data approved for dashboard integration')
       }));
 
+      // Update dashboard metrics
       // Update dashboard metrics
       dispatch(updateDashboardMetrics({
         totalPeopleReached: item.value,
@@ -199,27 +203,31 @@ dispatch(updateApprovalQueueItem({
 
 try {
       await dataPointService.reject(item.Id, rejectionReason, currentUser.name);
-dispatch(updateApprovalQueueItem({
+      
+      // Ensure all values are serializable before dispatch
+      const serializedUpdates = {
+        status: String('rejected'),
+        rejectedBy: String(currentUser.name || ''),
+        rejectedAt: new Date().toISOString(),
+        feedback: String(rejectionReason)
+      };
+
+      dispatch(updateApprovalQueueItem({
         id: item.id,
-        updates: {
-          status: 'rejected',
-          rejectedBy: String(currentUser.name),
-          rejectedAt: new Date().toISOString(),
-          feedback: String(rejectionReason)
-        }
-      }));
-dispatch(addAuditTrailEntry({
-        dataPointId: item.Id,
-        action: 'rejected',
-        user: currentUser.name,
-        comment: rejectionReason,
-        metadata: {
-          indicatorName: item.indicatorName,
-          value: item.value,
-          qualityScore: item.qualityScore
-        }
+        updates: serializedUpdates
       }));
 
+      dispatch(addAuditTrailEntry({
+        dataPointId: String(item.Id),
+        action: String('rejected'),
+        user: String(currentUser.name || ''),
+        comment: String(rejectionReason),
+        metadata: {
+          indicatorName: String(item.indicatorName || ''),
+          value: Number(item.value) || 0,
+          qualityScore: Number(item.qualityScore) || 0
+        }
+}));
       toast.success("Data rejected and feedback sent to submitter");
       
       setTimeout(() => {
@@ -236,24 +244,27 @@ dispatch(addAuditTrailEntry({
       return;
     }
 
-    try {
+try {
       await dataPointService.requestChanges(item.Id, changeRequests, currentUser.name);
       
-dispatch(updateApprovalQueueItem({
+      // Ensure all values are serializable before dispatch
+      const serializedUpdates = {
+        status: String('changes_requested'),
+        reviewedBy: String(currentUser.name || ''),
+        reviewedAt: new Date().toISOString(),
+        feedback: String(changeRequests)
+      };
+
+      dispatch(updateApprovalQueueItem({
         id: item.id,
-        updates: {
-          status: 'changes_requested',
-          reviewedBy: String(currentUser.name),
-          reviewedAt: new Date().toISOString(),
-          feedback: String(changeRequests)
-        }
+        updates: serializedUpdates
       }));
 
       dispatch(addAuditTrailEntry({
-        dataPointId: item.Id,
-        action: 'changes_requested',
-        user: currentUser.name,
-        comment: changeRequests
+        dataPointId: String(item.Id),
+        action: String('changes_requested'),
+        user: String(currentUser.name || ''),
+        comment: String(changeRequests)
       }));
 
       toast.success("Change requests sent to submitter");
@@ -491,8 +502,8 @@ dispatch(updateApprovalQueueItem({
 
       {/* Filters */}
       <Card className="p-4">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-<Select
+<div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <Select
             value={filters.status}
             onChange={(value) => dispatch(setApprovalQueueFilters({ status: value }))}
             options={[
@@ -501,7 +512,6 @@ dispatch(updateApprovalQueueItem({
               { value: "in_review", label: "In Review" }
             ]}
           />
-          
 <Select
             value={filters.priority}
             onChange={(value) => dispatch(setApprovalQueueFilters({ priority: value }))}
@@ -512,9 +522,9 @@ dispatch(updateApprovalQueueItem({
               { value: "low", label: "Low Priority" }
             ]}
           />
-<Select
-            value={filters.dateRange}
-            onChange={(e) => dispatch(setApprovalQueueFilters({ dateRange: e.target.value }))}
+          <Select
+value={filters.dateRange}
+            onChange={(value) => dispatch(setApprovalQueueFilters({ dateRange: value }))}
             options={[
               { value: "all", label: "All Time" },
               { value: "today", label: "Today" },
