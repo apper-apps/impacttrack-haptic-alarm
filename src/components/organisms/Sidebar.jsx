@@ -70,8 +70,8 @@ const Sidebar = () => {
               <ApperIcon name="Target" size={24} className="text-white" />
             </div>
             <div className="ml-3">
-              <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                ImpactTrack
+<h1 className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                Good Returns
               </h1>
               <p className="text-xs text-gray-600">MEL Platform</p>
             </div>
@@ -156,8 +156,8 @@ const Sidebar = () => {
                     <ApperIcon name="Target" size={20} className="text-white" />
                   </div>
                   <div className="ml-3">
-                    <h1 className="text-lg font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                      ImpactTrack
+<h1 className="text-lg font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                      Good Returns
                     </h1>
                     <p className="text-xs text-gray-600">MEL Platform</p>
                   </div>

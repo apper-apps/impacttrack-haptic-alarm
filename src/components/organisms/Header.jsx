@@ -43,8 +43,8 @@ const { currentUser, notifications } = useSelector((state) => state.mel);
           </Button>
           
           <div className="hidden sm:block">
-            <nav className="flex space-x-2 text-sm text-gray-600">
-              <span>Good Return</span>
+<nav className="flex space-x-2 text-sm text-gray-600">
+              <span>Good Returns</span>
               <ApperIcon name="ChevronRight" size={16} />
               <span className="text-gray-900 font-medium">MEL Platform</span>
             </nav>
